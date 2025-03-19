@@ -53,4 +53,5 @@ public class PlaneController : MonoBehaviour
     {
         rb.linearVelocity = -transform.forward * currentSpeed; // Add negative sign
     }
+    //angshu ekta khankir chele
 }
