@@ -6,23 +6,31 @@ public class PlaneController : MonoBehaviour
     [SerializeField] private Rigidbody rb;
 
     [Header("Movement Settings")]
-    [SerializeField] private float groundAcceleration = 5f;
-    [SerializeField] private float airNormalSpeed = 30f;
-    [SerializeField] private float airBoostSpeed = 50f;
+    [SerializeField] public float airNormalSpeed = 30f;
+    [SerializeField] public float airBoostSpeed = 50f;
     [SerializeField] private float speedDecayRate = 2f;
-    [SerializeField] private float takeoffSpeed = 20f;
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private float maxRollAngle = 60f;
     [SerializeField] private float rollSpeed = 2f;
     [SerializeField] private float pitchSpeed = 2f;
     [SerializeField] private float yawSpeed = 1f;
-    [SerializeField] private float coordinatedTurnFactor = 2f;  // Controls how much roll is applied during yaw
+
+    [Header("Sensitivity Schemes")]
+    [Range(0, 2)]
+    [SerializeField] private float pitchSensitivityMultiplier = 1f;
+    [Range(0, 2)]
+    [SerializeField] private float rollSensitivityMultiplier = 1f;
+    [SerializeField] private bool useExponentialPitchResponse = false;
+    [SerializeField] private bool useProgressiveRollResponse = false;
+    [SerializeField] private float exponentialPitchFactor = 1.5f;
+    [SerializeField] private float progressiveRollThreshold = 0.3f;
+    [SerializeField] private float progressiveRollMultiplier = 1.5f;
 
     [Header("Input Smoothing")]
     [SerializeField] private float inputSmoothTime = 0.1f; // Smoothing time for mouse input
+    [SerializeField] private float keyboardSmoothTime = 0.15f; // Smoothing time for keyboard input
 
     // Public state variables for monitoring
-    public bool isGrounded = true;
     public float currentSpeed = 0f;
     public float targetSpeed = 0f;
     public Vector3 currentRotation;
@@ -34,8 +42,10 @@ public class PlaneController : MonoBehaviour
 
     // Smoothing variables
     private float smoothPitchVelocity;
+    private float smoothRollVelocity;
     private float smoothYawVelocity;
     private float targetPitchInput = 0f;
+    private float targetRollInput = 0f;
     private float targetYawInput = 0f;
 
     private void Start()
@@ -47,76 +57,93 @@ public class PlaneController : MonoBehaviour
         // Lock cursor for flight controls
         Cursor.lockState = CursorLockMode.Locked;
 
-        // Ensure gravity is on at start
-        rb.useGravity = true;
+        // Disable gravity - we're always flying
+        rb.useGravity = false;
 
-        Debug.Log("Plane Controller initialized. Grounded: " + isGrounded);
+        // Initialize with normal flying speed
+        currentSpeed = airNormalSpeed;
+        targetSpeed = airNormalSpeed;
+
+        Debug.Log("Plane Controller initialized in flying mode");
     }
 
     private void Update()
     {
-        // Get raw input
+        // Get throttle input
         float throttleInput = Input.GetKey(KeyCode.W) ? 1f : 0f;
 
-        // Set target inputs from mouse
-        targetPitchInput = -Input.GetAxis("Mouse Y") * mouseSensitivity;
-        targetYawInput = Input.GetAxis("Mouse X") * mouseSensitivity;
+        // Get base pitch input from mouse Y-axis
+        float rawPitchInput = -Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Smooth the pitch and yaw inputs
-        pitchInput = Mathf.SmoothDamp(pitchInput, targetPitchInput, ref smoothPitchVelocity, inputSmoothTime);
-        yawInput = Mathf.SmoothDamp(yawInput, targetYawInput, ref smoothYawVelocity, inputSmoothTime);
+        // Get base roll input from mouse X-axis
+        float rawRollInput = -Input.GetAxis("Mouse X") * mouseSensitivity;
 
-        // Manual roll input based on A/D keys (additional to coordinated turns)
+        // Apply sensitivity schemes
+        targetPitchInput = ApplyPitchSensitivityScheme(rawPitchInput);
+        targetRollInput = ApplyRollSensitivityScheme(rawRollInput);
+
+        // Get yaw input from A/D keys
         if (Input.GetKey(KeyCode.A))
-            rollInput = Mathf.Lerp(rollInput, -1f, Time.deltaTime * rollSpeed);
+            targetYawInput = -1f;
         else if (Input.GetKey(KeyCode.D))
-            rollInput = Mathf.Lerp(rollInput, 1f, Time.deltaTime * rollSpeed);
+            targetYawInput = 1f;
         else
-            rollInput = Mathf.Lerp(rollInput, 0f, Time.deltaTime * rollSpeed);
+            targetYawInput = 0f;
 
-        // Handle ground movement
-        if (isGrounded)
-        {
-            HandleGroundMovement(throttleInput);
-        }
-        else
-        {
-            HandleAirMovement(throttleInput, pitchInput, yawInput);
-        }
+        // Smooth all inputs
+        pitchInput = Mathf.SmoothDamp(pitchInput, targetPitchInput, ref smoothPitchVelocity, inputSmoothTime);
+        rollInput = Mathf.SmoothDamp(rollInput, targetRollInput, ref smoothRollVelocity, inputSmoothTime);
+        yawInput = Mathf.SmoothDamp(yawInput, targetYawInput, ref smoothYawVelocity, keyboardSmoothTime);
+
+        // Handle air movement
+        HandleFlying(throttleInput);
 
         // Update current rotation for debugging
         currentRotation = transform.eulerAngles;
     }
 
-    private void HandleGroundMovement(float throttleInput)
+    private float ApplyPitchSensitivityScheme(float input)
     {
-        // Accelerate on ground
-        if (throttleInput > 0)
+        // Apply base sensitivity multiplier
+        float modifiedInput = input * pitchSensitivityMultiplier;
+
+        // Apply exponential response if enabled
+        if (useExponentialPitchResponse)
         {
-            currentSpeed += groundAcceleration * Time.deltaTime;
-            Debug.Log("Accelerating on ground. Current Speed: " + currentSpeed);
-        }
-        else
-        {
-            currentSpeed = Mathf.Lerp(currentSpeed, 0f, Time.deltaTime);
+            // Preserve the sign while applying exponential curve
+            float sign = Mathf.Sign(modifiedInput);
+            float absValue = Mathf.Abs(modifiedInput);
+
+            // Apply exponential response for more precision at center, more response at extremes
+            modifiedInput = sign * Mathf.Pow(absValue, exponentialPitchFactor);
         }
 
-        // Apply forward movement
-        rb.linearVelocity = transform.forward * currentSpeed;
-
-        // Check for takeoff
-        if (currentSpeed >= takeoffSpeed)
-        {
-            isGrounded = false;
-            // Turn off gravity once takeoff is achieved
-            rb.useGravity = false;
-            // Apply initial lift
-            rb.AddForce(Vector3.up * takeoffSpeed, ForceMode.Impulse);
-            Debug.Log("Taking off! Speed: " + currentSpeed + " - Gravity disabled");
-        }
+        return modifiedInput;
     }
 
-    private void HandleAirMovement(float throttleInput, float pitchInput, float yawInput)
+    private float ApplyRollSensitivityScheme(float input)
+    {
+        // Apply base sensitivity multiplier
+        float modifiedInput = input * rollSensitivityMultiplier;
+
+        // Apply progressive response if enabled
+        if (useProgressiveRollResponse)
+        {
+            // Apply progressive response - faster response after threshold
+            if (Mathf.Abs(modifiedInput) > progressiveRollThreshold)
+            {
+                float exceededAmount = Mathf.Abs(modifiedInput) - progressiveRollThreshold;
+                float extraResponse = exceededAmount * progressiveRollMultiplier;
+
+                modifiedInput = Mathf.Sign(modifiedInput) *
+                    (progressiveRollThreshold + extraResponse);
+            }
+        }
+
+        return modifiedInput;
+    }
+
+    private void HandleFlying(float throttleInput)
     {
         // Set target speed based on throttle
         targetSpeed = throttleInput > 0 ? airBoostSpeed : airNormalSpeed;
@@ -125,25 +152,22 @@ public class PlaneController : MonoBehaviour
         currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * speedDecayRate);
 
         // Apply rotations
-        ApplyRotation(pitchInput, yawInput);
+        ApplyRotation();
 
         // Apply forward movement
         rb.linearVelocity = transform.forward * currentSpeed;
     }
 
-    private void ApplyRotation(float pitchInput, float yawInput)
+    private void ApplyRotation()
     {
         // Apply pitch (up/down)
         transform.Rotate(Vector3.right * pitchInput * pitchSpeed);
 
-        // Apply yaw (left/right) - this will rotate the plane around its up axis
+        // Apply yaw (left/right) - controlled by A/D keys
         transform.Rotate(Vector3.up * yawInput * yawSpeed);
 
-        // Calculate roll based on both manual input and coordinated turn
-        // This creates the banking effect during turns
-        float coordinatedRoll = -yawInput * coordinatedTurnFactor;
-        float totalRollInput = rollInput + coordinatedRoll;
-        float effectiveRollAngle = totalRollInput * maxRollAngle;
+        // Apply roll (banking) - controlled by mouse X
+        float effectiveRollAngle = rollInput * maxRollAngle;
 
         // Get current roll angle
         Vector3 currentEulerAngles = transform.eulerAngles;
@@ -159,32 +183,10 @@ public class PlaneController : MonoBehaviour
         // Apply the new roll angle
         transform.eulerAngles = new Vector3(currentEulerAngles.x, currentEulerAngles.y, newRoll);
 
-        // Debug roll information for significant changes
-        if (Mathf.Abs(yawInput) > 0.1f || Mathf.Abs(rollInput) > 0.1f)
+        // Debug rotation information for significant changes
+        if (Mathf.Abs(rollInput) > 0.1f || Mathf.Abs(yawInput) > 0.1f)
         {
-            Debug.Log($"Yaw Input: {yawInput}, Coordinated Roll: {coordinatedRoll}, Manual Roll: {rollInput}, Total Roll: {newRoll}");
-        }
-    }
-
-    // Method to detect when the plane touches the ground again
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Ground"))
-        {
-            isGrounded = true;
-            // Turn gravity back on when landing
-            rb.useGravity = true;
-            currentSpeed = Mathf.Min(currentSpeed, takeoffSpeed * 0.8f); // Reduce speed on landing
-            Debug.Log("Landed! Reduced speed to: " + currentSpeed + " - Gravity enabled");
-        }
-    }
-
-    // Method when the plane leaves the ground
-    private void OnCollisionExit(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Ground") && isGrounded)
-        {
-            Debug.Log("No longer in contact with ground, but still in ground state until takeoff speed is reached");
+            Debug.Log($"Roll Input: {rollInput}, Yaw Input: {yawInput}, Current Roll: {newRoll}");
         }
     }
 }
