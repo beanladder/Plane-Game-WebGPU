@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class ArcadePlaneController : MonoBehaviour
+public class PlaneController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Rigidbody rb;
@@ -18,6 +18,9 @@ public class ArcadePlaneController : MonoBehaviour
     [SerializeField] private float yawSpeed = 1f;
     [SerializeField] private float coordinatedTurnFactor = 2f;  // Controls how much roll is applied during yaw
 
+    [Header("Input Smoothing")]
+    [SerializeField] private float inputSmoothTime = 0.1f; // Smoothing time for mouse input
+
     // Public state variables for monitoring
     public bool isGrounded = true;
     public float currentSpeed = 0f;
@@ -27,6 +30,13 @@ public class ArcadePlaneController : MonoBehaviour
     // Private state variables
     private float rollInput = 0f;
     private float yawInput = 0f;
+    private float pitchInput = 0f;
+
+    // Smoothing variables
+    private float smoothPitchVelocity;
+    private float smoothYawVelocity;
+    private float targetPitchInput = 0f;
+    private float targetYawInput = 0f;
 
     private void Start()
     {
@@ -45,10 +55,16 @@ public class ArcadePlaneController : MonoBehaviour
 
     private void Update()
     {
-        // Get input
+        // Get raw input
         float throttleInput = Input.GetKey(KeyCode.W) ? 1f : 0f;
-        float pitchInput = -Input.GetAxis("Mouse Y") * mouseSensitivity;
-        yawInput = Input.GetAxis("Mouse X") * mouseSensitivity;
+
+        // Set target inputs from mouse
+        targetPitchInput = -Input.GetAxis("Mouse Y") * mouseSensitivity;
+        targetYawInput = Input.GetAxis("Mouse X") * mouseSensitivity;
+
+        // Smooth the pitch and yaw inputs
+        pitchInput = Mathf.SmoothDamp(pitchInput, targetPitchInput, ref smoothPitchVelocity, inputSmoothTime);
+        yawInput = Mathf.SmoothDamp(yawInput, targetYawInput, ref smoothYawVelocity, inputSmoothTime);
 
         // Manual roll input based on A/D keys (additional to coordinated turns)
         if (Input.GetKey(KeyCode.A))
@@ -85,7 +101,7 @@ public class ArcadePlaneController : MonoBehaviour
             currentSpeed = Mathf.Lerp(currentSpeed, 0f, Time.deltaTime);
         }
 
-        // Apply    forward movement
+        // Apply forward movement
         rb.linearVelocity = transform.forward * currentSpeed;
 
         // Check for takeoff
