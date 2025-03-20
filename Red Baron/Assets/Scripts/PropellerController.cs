@@ -35,7 +35,7 @@ public class PropellerController : MonoBehaviour
         degreesPerSecond = currentRpm * 360f / 60f;
         
         // Rotate the propeller along the X-axis
-        transform.Rotate(Vector3.up * degreesPerSecond * Time.deltaTime);
+        transform.Rotate(Vector3.forward * degreesPerSecond * Time.deltaTime);
         
         // Update shader properties if material exists
         if (propellerMaterial != null)
