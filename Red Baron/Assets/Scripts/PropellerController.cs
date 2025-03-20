@@ -1,85 +1,196 @@
 using UnityEngine;
+using System.Collections;
 
 public class PropellerController : MonoBehaviour
 {
+    [Header("References")]
+    [SerializeField] private Transform propellerBlades; // The actual propeller blades mesh
+    [SerializeField] private GameObject blurCylinder; // The cylindrical blur effect
+    [SerializeField] private PlaneController planeController; // Reference to the plane controller
+    [SerializeField] private Material blurMaterial; // Reference to the blur material
+    [SerializeField] private Renderer bladesRenderer; // Reference to the propeller blades renderer
+
     [Header("Propeller Settings")]
-    [Tooltip("RPM of the propeller")]
-    [Range(0, 10000)]
-    public float rpm = 1000f;
-    
-    [Tooltip("Maximum allowed RPM")]
-    public float maxRpm = 10000f;
-    
-    [Header("Animation Settings")]
-    [Tooltip("Time to reach target RPM")]
-    public float accelerationTime = 2.0f;
-    
-    [Header("Shader Control")]
-    [Tooltip("Material with the propeller shader")]
-    public Material propellerMaterial;
-    
-    // Internal variables
-    private float currentRpm = 0f;
-    private float degreesPerSecond;
-    private int tweenId = -1;
-    
-    void Start()
+    [SerializeField] private float minRotationSpeed = 500f; // Minimum rotation speed in degrees per second
+    [SerializeField] private float maxRotationSpeed = 3000f; // Maximum rotation speed in degrees per second
+    [SerializeField] private float rotationSpeedMultiplier = 60f; // Multiplier to calculate rotation from plane speed
+    [SerializeField] private float blurThresholdSpeed = 1500f; // Speed at which to switch to blur effect
+    [SerializeField] private float transitionDuration = 0.3f; // Duration of transition between blades and blur
+
+    [Header("Color Settings")]
+    [SerializeField] private Color bladeColor = Color.white; // Color of the physical blades
+    [SerializeField] private Color blurMainColor = Color.white; // Main color of the blur effect
+    [SerializeField] private Color blurShimmerColor = Color.white; // Shimmer color of the blur effect
+    [SerializeField] private bool synchronizeColors = true; // Whether to sync blur colors with blade color
+
+    [Header("Shader Properties")]
+    [SerializeField] private string opacityPropertyName = "_Opacity"; // Property name for opacity in shader
+    [SerializeField] private string speedPropertyName = "_ShimmerSpeed"; // Property name for speed in shader
+    [SerializeField] private float minOpacity = 0.3f; // Minimum opacity
+    [SerializeField] private float maxOpacity = 0.8f; // Maximum opacity
+    [SerializeField] private float shimmerSpeedMin = 1f; // Minimum shimmer speed
+    [SerializeField] private float shimmerSpeedMax = 5f; // Maximum shimmer speed
+
+    // Internal state
+    private float currentRotationSpeed;
+    private bool usingBlurEffect = false;
+    private MaterialPropertyBlock propBlock;
+    private MaterialPropertyBlock bladePropBlock;
+
+    private void Start()
     {
-        // Set initial RPM
-        SetRpm(rpm);
-    }
-    
-    void Update()
-    {
-        // Convert RPM to degrees per second
-        degreesPerSecond = currentRpm * 360f / 60f;
+        // Get reference to PlaneController if not set
+        if (planeController == null)
+            planeController = GetComponentInParent<PlaneController>();
+
+        // Initialize material property block for efficient shader property updates
+        propBlock = new MaterialPropertyBlock();
+        bladePropBlock = new MaterialPropertyBlock();
+
+        // Initially hide blur cylinder and show blades
+        if (blurCylinder != null)
+            blurCylinder.SetActive(false);
         
-        // Rotate the propeller along the X-axis
-        transform.Rotate(Vector3.forward * degreesPerSecond * Time.deltaTime);
-        
-        // Update shader properties if material exists
-        if (propellerMaterial != null)
-        {
-            // Calculate normalized RPM (0-1 range)
-            float normalizedRpm = Mathf.Clamp01(currentRpm / maxRpm);
+        if (propellerBlades != null)
+            propellerBlades.gameObject.SetActive(true);
             
-            // Update shader properties
-            propellerMaterial.SetFloat("_RotationSpeed", normalizedRpm);
-            propellerMaterial.SetFloat("_BlurAmount", normalizedRpm);
-            propellerMaterial.SetFloat("_Transparency", normalizedRpm * 0.8f); // Link transparency to RPM
+        // Set initial colors
+        UpdateBladeColor();
+        SynchronizeBlurColors();
+    }
+
+    private void Update()
+    {
+        // Calculate rotation speed based on plane's current speed
+        float speedRatio = Mathf.InverseLerp(planeController.airNormalSpeed, planeController.airBoostSpeed, planeController.currentSpeed);
+        currentRotationSpeed = Mathf.Lerp(minRotationSpeed, maxRotationSpeed, speedRatio);
+
+        // Rotate the propeller blades if they're active
+        if (propellerBlades != null && propellerBlades.gameObject.activeInHierarchy)
+        {
+            propellerBlades.Rotate(Vector3.forward * currentRotationSpeed * Time.deltaTime);
+        }
+
+        // Check if we need to switch between physical blades and blur effect
+        if (!usingBlurEffect && currentRotationSpeed >= blurThresholdSpeed)
+        {
+            StartCoroutine(TransitionToBlur());
+        }
+        else if (usingBlurEffect && currentRotationSpeed < blurThresholdSpeed)
+        {
+            StartCoroutine(TransitionToBlades());
+        }
+
+        // Update blur shader properties
+        if (blurCylinder != null && blurCylinder.activeInHierarchy)
+        {
+            UpdateBlurShader();
+        }
+    }
+
+    public void SetBladeColor(Color newColor)
+    {
+        bladeColor = newColor;
+        UpdateBladeColor();
+        
+        if (synchronizeColors)
+        {
+            SynchronizeBlurColors();
         }
     }
     
-    // Method to set RPM with animation
-    public void SetRpm(float targetRpm)
+    public void SetBlurColors(Color mainColor, Color shimmerColor)
     {
-        // Clamp target RPM
-        targetRpm = Mathf.Clamp(targetRpm, 0, maxRpm);
+        blurMainColor = mainColor;
+        blurShimmerColor = shimmerColor;
+        synchronizeColors = false; // Disable sync when manually setting colors
         
-        // Cancel any existing tween
-        if (tweenId != -1)
+        if (blurMaterial != null)
         {
-            LeanTween.cancel(tweenId);
+            blurMaterial.SetColor("_MainColor", blurMainColor);
+            blurMaterial.SetColor("_ShimmerColor", blurMainColor); // Use same color for shimmer to avoid color changes
         }
-        
-        // Create new tween to target RPM
-        tweenId = LeanTween.value(gameObject, currentRpm, targetRpm, accelerationTime)
-            .setEase(LeanTweenType.easeInOutQuad)
-            .setOnUpdate((float value) => {
-                currentRpm = value;
-                // Update the public rpm value to match
-                rpm = value;
-            })
-            .id;
+    }
+
+    private void UpdateBladeColor()
+    {
+        if (bladesRenderer != null)
+        {
+            bladesRenderer.GetPropertyBlock(bladePropBlock);
+            bladePropBlock.SetColor("_Color", bladeColor);
+            bladesRenderer.SetPropertyBlock(bladePropBlock);
+        }
     }
     
-    // Editor-only method to update RPM when slider changes
-    void OnValidate()
+    private void SynchronizeBlurColors()
     {
-        // Only respond to changes during play mode
-        if (Application.isPlaying)
+        if (!synchronizeColors || blurMaterial == null) return;
+        
+        // Use blade color for both main and shimmer color to maintain consistency
+        blurMainColor = bladeColor;
+        blurShimmerColor = bladeColor; // Use same color instead of creating a lighter version
+        
+        // Apply to material
+        blurMaterial.SetColor("_MainColor", blurMainColor);
+        blurMaterial.SetColor("_ShimmerColor", blurMainColor);
+        
+        // Disable shimmer effect to prevent color variations
+        blurMaterial.SetFloat("_ShimmerIntensity", 0.0f);
+    }
+
+    private void UpdateBlurShader()
+    {
+        // Calculate opacity based on speed (faster = less opaque)
+        float opacity = Mathf.Lerp(maxOpacity, minOpacity, Mathf.InverseLerp(blurThresholdSpeed, maxRotationSpeed, currentRotationSpeed));
+        
+        // Calculate shimmer speed based on rotation speed
+        float shimmerSpeed = Mathf.Lerp(shimmerSpeedMin, shimmerSpeedMax, Mathf.InverseLerp(minRotationSpeed, maxRotationSpeed, currentRotationSpeed));
+        
+        // Update shader properties using property block
+        Renderer renderer = blurCylinder.GetComponent<Renderer>();
+        if (renderer != null)
         {
-            SetRpm(rpm);
+            renderer.GetPropertyBlock(propBlock);
+            propBlock.SetFloat(opacityPropertyName, opacity);
+            propBlock.SetFloat(speedPropertyName, shimmerSpeed);
+            propBlock.SetFloat("_ShimmerIntensity", 0.0f); // Set shimmer intensity to 0 to disable color changing
+            propBlock.SetColor("_MainColor", blurMainColor); // Force the main color
+            propBlock.SetColor("_ShimmerColor", blurMainColor); // Use same color for shimmer
+            renderer.SetPropertyBlock(propBlock);
         }
+    }
+
+    private IEnumerator TransitionToBlur()
+    {
+        usingBlurEffect = true;
+        
+        // Make sure blur colors match blade color if sync is enabled
+        if (synchronizeColors)
+        {
+            SynchronizeBlurColors();
+        }
+        
+        // Activate blur
+        blurCylinder.SetActive(true);
+        
+        // Wait for transition
+        yield return new WaitForSeconds(transitionDuration);
+        
+        // Deactivate blades
+        propellerBlades.gameObject.SetActive(false);
+    }
+
+    private IEnumerator TransitionToBlades()
+    {
+        usingBlurEffect = false;
+        
+        // Activate blades
+        propellerBlades.gameObject.SetActive(true);
+        
+        // Wait for transition
+        yield return new WaitForSeconds(transitionDuration);
+        
+        // Deactivate blur
+        blurCylinder.SetActive(false);
     }
 }
