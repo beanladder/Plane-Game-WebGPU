@@ -46,8 +46,7 @@ public class PropellerController : MonoBehaviour
             // Update shader properties
             propellerMaterial.SetFloat("_RotationSpeed", normalizedRpm);
             propellerMaterial.SetFloat("_BlurAmount", normalizedRpm);
-            propellerMaterial.SetFloat("_Transparency", normalizedRpm);
-            propellerMaterial.SetFloat("_RotationDirection", 1f); // 1 for clockwise, -1 for counter-clockwise
+            propellerMaterial.SetFloat("_Transparency", normalizedRpm * 0.8f); // Link transparency to RPM
         }
     }
     
