@@ -1121,7 +1121,7 @@ MonoBehaviour:
     BindingMode: 3
     PositionDamping: {x: 0, y: 0, z: 0}
     AngularDampingMode: 0
-    RotationDamping: {x: 0.5, y: 1, z: 0.25}
+    RotationDamping: {x: 0.5, y: 1, z: 0.5}
     QuaternionDamping: 1
   FollowOffset: {x: 0, y: 3.99, z: -11.49}
 --- !u!114 &755066238
@@ -1942,12 +1942,15 @@ MonoBehaviour:
   rb: {fileID: 1908528211}
   airNormalSpeed: 30
   airBoostSpeed: 50
-  speedDecayRate: 2
+  accelerationRate: 1
+  decelerationRate: 0.5
   mouseSensitivity: 2
   maxRollAngle: 60
   rollSpeed: 0.5
   pitchSpeed: 0.5
   yawSpeed: 1
+  rotationalDamping: 0.97
+  rollDamping: 0.98
   pitchSensitivityMultiplier: 1
   rollSensitivityMultiplier: 1
   useExponentialPitchResponse: 0
@@ -2115,15 +2118,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: rollSpeed
-      value: 50
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: maxRollAngle
       value: 360
       objectReference: {fileID: 0}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: inputSmoothTime
+      value: 0.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: rotationalDamping
+      value: 0.97
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: lockCameraToHorizon
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: rollSensitivityMultiplier
       value: 0.07
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: useProgressiveRollResponse
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8418229091600320973, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_LocalPosition.x

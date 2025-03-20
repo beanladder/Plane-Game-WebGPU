@@ -8,12 +8,17 @@ public class PlaneController : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] public float airNormalSpeed = 30f;
     [SerializeField] public float airBoostSpeed = 50f;
-    [SerializeField] private float speedDecayRate = 2f;
+    [SerializeField] private float accelerationRate = 1f;
+    [SerializeField] private float decelerationRate = 0.5f;
     [SerializeField] private float mouseSensitivity = 2f;
-    [SerializeField] private float maxRollAngle = 360f; // Changed to allow full 360 degrees
+    [SerializeField] private float maxRollAngle = 360f;
     [SerializeField] private float rollSpeed = 2f;
     [SerializeField] private float pitchSpeed = 2f;
     [SerializeField] private float yawSpeed = 1f;
+
+    [Header("Inertia Settings")]
+    [SerializeField] private float rotationalDamping = 0.97f; // Higher values (closer to 1) mean slower deceleration
+    [SerializeField] private float rollDamping = 0.98f; // Specific damping for roll to make it even smoother
 
     [Header("Sensitivity Schemes")]
     [Range(0, 2)]
@@ -27,11 +32,11 @@ public class PlaneController : MonoBehaviour
     [SerializeField] private float progressiveRollMultiplier = 1.5f;
 
     [Header("Input Smoothing")]
-    [SerializeField] private float inputSmoothTime = 0.1f; // Smoothing time for mouse input
-    [SerializeField] private float keyboardSmoothTime = 0.15f; // Smoothing time for keyboard input
+    [SerializeField] private float inputSmoothTime = 0.1f;
+    [SerializeField] private float keyboardSmoothTime = 0.15f;
 
     [Header("Camera Settings")]
-    [SerializeField] private bool lockCameraToHorizon = true; // Keep camera level regardless of roll
+    [SerializeField] private bool lockCameraToHorizon = true;
 
     // Public state variables for monitoring
     public float currentSpeed = 0f;
@@ -51,8 +56,11 @@ public class PlaneController : MonoBehaviour
     private float targetRollInput = 0f;
     private float targetYawInput = 0f;
 
-    // Track the accumulated roll angle
-    private float currentRollAngle = 0f;
+    // Inertia and momentum variables
+    private float rollVelocity = 0f;
+    private float pitchVelocity = 0f;
+    private float yawVelocity = 0f;
+    private float speedSmoothVelocity;
 
     // Reference to the camera (if needed)
     private Camera mainCamera;
@@ -69,6 +77,10 @@ public class PlaneController : MonoBehaviour
 
         // Disable gravity - we're always flying
         rb.useGravity = false;
+
+        // Set drag to zero for more consistent flight
+        rb.linearDamping = 0f;
+        rb.angularDamping = 0f;
 
         // Initialize with normal flying speed
         currentSpeed = airNormalSpeed;
@@ -87,7 +99,7 @@ public class PlaneController : MonoBehaviour
     private void Update()
     {
         // Get throttle input
-        float throttleInput = Input.GetKey(KeyCode.W) ? 1f : 0f;
+        float throttleInput = Input.GetKey(KeyCode.W) ? 1f : (Input.GetKey(KeyCode.S) ? -0.5f : 0f);
 
         // Get base pitch input from mouse Y-axis
         float rawPitchInput = -Input.GetAxis("Mouse Y") * mouseSensitivity;
@@ -122,7 +134,6 @@ public class PlaneController : MonoBehaviour
         if (lockCameraToHorizon && cameraTransform != null && cameraTransform.parent == transform)
         {
             // This will keep the camera upright regardless of the plane's roll
-            // Adjust as needed based on your camera setup
             Vector3 cameraEuler = cameraTransform.localEulerAngles;
             cameraTransform.localEulerAngles = new Vector3(cameraEuler.x, cameraEuler.y, -transform.eulerAngles.z);
         }
@@ -172,10 +183,26 @@ public class PlaneController : MonoBehaviour
     private void HandleFlying(float throttleInput)
     {
         // Set target speed based on throttle
-        targetSpeed = throttleInput > 0 ? airBoostSpeed : airNormalSpeed;
+        if (throttleInput > 0)
+        {
+            targetSpeed = Mathf.Lerp(airNormalSpeed, airBoostSpeed, throttleInput);
+        }
+        else if (throttleInput < 0)
+        {
+            // Allow slowing down
+            targetSpeed = Mathf.Lerp(airNormalSpeed, airNormalSpeed * 0.5f, -throttleInput);
+        }
+        else
+        {
+            // Cruise at normal speed when no input
+            targetSpeed = airNormalSpeed;
+        }
 
-        // Smoothly adjust current speed
-        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * speedDecayRate);
+        // Determine rate to use based on whether we're speeding up or slowing down
+        float rate = currentSpeed < targetSpeed ? accelerationRate : decelerationRate;
+
+        // Smoothly adjust current speed with proper acceleration/deceleration
+        currentSpeed = Mathf.SmoothDamp(currentSpeed, targetSpeed, ref speedSmoothVelocity, 1f / rate);
 
         // Apply rotations
         ApplyRotation();
@@ -186,29 +213,52 @@ public class PlaneController : MonoBehaviour
 
     private void ApplyRotation()
     {
-        // Apply pitch (up/down)
-        transform.Rotate(Vector3.right * pitchInput * pitchSpeed);
+        // Calculate target velocities based on inputs
+        float targetRollVelocity = rollInput * rollSpeed * 100f;
+        float targetPitchVelocity = pitchInput * pitchSpeed * 100f;
+        float targetYawVelocity = yawInput * yawSpeed * 100f;
 
-        // Apply yaw (left/right) - controlled by A/D keys
-        transform.Rotate(Vector3.up * yawInput * yawSpeed);
-
-        // Handle roll directly by accumulating the roll angle
+        // Smoothly transition between current velocity and target velocity
         if (Mathf.Abs(rollInput) > 0.01f)
         {
-            // Calculate roll change based on input
-            float rollChange = rollInput * rollSpeed * Time.deltaTime * 100f; // Use a multiplier for appropriate rotation speed
+            // When there's input, accelerate toward that input
+            rollVelocity = Mathf.Lerp(rollVelocity, targetRollVelocity, Time.deltaTime * 5f);
+        }
+        else
+        {
+            // When no input, apply damping to gradually reduce velocity
+            rollVelocity *= rollDamping;
+        }
 
-            // Accumulate roll (allow full 360-degree rotation)
-            currentRollAngle += rollChange;
+        // Same for pitch
+        if (Mathf.Abs(pitchInput) > 0.01f)
+        {
+            pitchVelocity = Mathf.Lerp(pitchVelocity, targetPitchVelocity, Time.deltaTime * 5f);
+        }
+        else
+        {
+            pitchVelocity *= rotationalDamping;
+        }
 
-            // Apply the roll directly through transform rotation around local Z axis
-            transform.Rotate(Vector3.forward, rollChange, Space.Self);
+        // Same for yaw
+        if (Mathf.Abs(yawInput) > 0.01f)
+        {
+            yawVelocity = Mathf.Lerp(yawVelocity, targetYawVelocity, Time.deltaTime * 5f);
+        }
+        else
+        {
+            yawVelocity *= rotationalDamping;
+        }
 
-            // Debug significant roll changes
-            if (Mathf.Abs(rollChange) > 1f)
-            {
-                Debug.Log($"Roll Input: {rollInput}, Roll Change: {rollChange}, Current Z: {transform.eulerAngles.z}");
-            }
+        // Apply the actual rotations based on the velocities
+        transform.Rotate(Vector3.right * pitchVelocity * Time.deltaTime, Space.Self);
+        transform.Rotate(Vector3.up * yawVelocity * Time.deltaTime, Space.Self);
+        transform.Rotate(Vector3.forward * rollVelocity * Time.deltaTime, Space.Self);
+
+        // Debug logging when there are significant velocity changes
+        if (Mathf.Abs(rollVelocity) > 5f)
+        {
+            Debug.Log($"Roll Velocity: {rollVelocity}, Input: {rollInput}");
         }
     }
 }
