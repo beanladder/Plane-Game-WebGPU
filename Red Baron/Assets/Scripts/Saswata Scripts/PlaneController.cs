@@ -10,7 +10,7 @@ public class PlaneController : MonoBehaviour
     [SerializeField] public float airBoostSpeed = 50f;
     [SerializeField] private float speedDecayRate = 2f;
     [SerializeField] private float mouseSensitivity = 2f;
-    [SerializeField] private float maxRollAngle = 60f;
+    [SerializeField] private float maxRollAngle = 360f; // Changed to allow full 360 degrees
     [SerializeField] private float rollSpeed = 2f;
     [SerializeField] private float pitchSpeed = 2f;
     [SerializeField] private float yawSpeed = 1f;
@@ -30,6 +30,9 @@ public class PlaneController : MonoBehaviour
     [SerializeField] private float inputSmoothTime = 0.1f; // Smoothing time for mouse input
     [SerializeField] private float keyboardSmoothTime = 0.15f; // Smoothing time for keyboard input
 
+    [Header("Camera Settings")]
+    [SerializeField] private bool lockCameraToHorizon = true; // Keep camera level regardless of roll
+
     // Public state variables for monitoring
     public float currentSpeed = 0f;
     public float targetSpeed = 0f;
@@ -48,6 +51,13 @@ public class PlaneController : MonoBehaviour
     private float targetRollInput = 0f;
     private float targetYawInput = 0f;
 
+    // Track the accumulated roll angle
+    private float currentRollAngle = 0f;
+
+    // Reference to the camera (if needed)
+    private Camera mainCamera;
+    private Transform cameraTransform;
+
     private void Start()
     {
         // Get reference to the Rigidbody if not set in the Inspector
@@ -63,6 +73,13 @@ public class PlaneController : MonoBehaviour
         // Initialize with normal flying speed
         currentSpeed = airNormalSpeed;
         targetSpeed = airNormalSpeed;
+
+        // Get camera reference
+        mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            cameraTransform = mainCamera.transform;
+        }
 
         Debug.Log("Plane Controller initialized in flying mode");
     }
@@ -100,6 +117,15 @@ public class PlaneController : MonoBehaviour
 
         // Update current rotation for debugging
         currentRotation = transform.eulerAngles;
+
+        // Update camera if needed
+        if (lockCameraToHorizon && cameraTransform != null && cameraTransform.parent == transform)
+        {
+            // This will keep the camera upright regardless of the plane's roll
+            // Adjust as needed based on your camera setup
+            Vector3 cameraEuler = cameraTransform.localEulerAngles;
+            cameraTransform.localEulerAngles = new Vector3(cameraEuler.x, cameraEuler.y, -transform.eulerAngles.z);
+        }
     }
 
     private float ApplyPitchSensitivityScheme(float input)
@@ -166,27 +192,23 @@ public class PlaneController : MonoBehaviour
         // Apply yaw (left/right) - controlled by A/D keys
         transform.Rotate(Vector3.up * yawInput * yawSpeed);
 
-        // Apply roll (banking) - controlled by mouse X
-        float effectiveRollAngle = rollInput * maxRollAngle;
-
-        // Get current roll angle
-        Vector3 currentEulerAngles = transform.eulerAngles;
-        float currentRoll = currentEulerAngles.z;
-
-        // Normalize the angle to -180 to 180
-        if (currentRoll > 180f)
-            currentRoll -= 360f;
-
-        // Smoothly interpolate to the target roll
-        float newRoll = Mathf.Lerp(currentRoll, effectiveRollAngle, Time.deltaTime * rollSpeed);
-
-        // Apply the new roll angle
-        transform.eulerAngles = new Vector3(currentEulerAngles.x, currentEulerAngles.y, newRoll);
-
-        // Debug rotation information for significant changes
-        if (Mathf.Abs(rollInput) > 0.1f || Mathf.Abs(yawInput) > 0.1f)
+        // Handle roll directly by accumulating the roll angle
+        if (Mathf.Abs(rollInput) > 0.01f)
         {
-            Debug.Log($"Roll Input: {rollInput}, Yaw Input: {yawInput}, Current Roll: {newRoll}");
+            // Calculate roll change based on input
+            float rollChange = rollInput * rollSpeed * Time.deltaTime * 100f; // Use a multiplier for appropriate rotation speed
+
+            // Accumulate roll (allow full 360-degree rotation)
+            currentRollAngle += rollChange;
+
+            // Apply the roll directly through transform rotation around local Z axis
+            transform.Rotate(Vector3.forward, rollChange, Space.Self);
+
+            // Debug significant roll changes
+            if (Mathf.Abs(rollChange) > 1f)
+            {
+                Debug.Log($"Roll Input: {rollInput}, Roll Change: {rollChange}, Current Z: {transform.eulerAngles.z}");
+            }
         }
     }
 }
