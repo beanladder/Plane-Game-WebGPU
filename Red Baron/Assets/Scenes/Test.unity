@@ -1873,8 +1873,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1793867942}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.24433504, y: 0, z: 0, w: 0.9696909}
-  m_LocalPosition: {x: -1.4355106, y: 409.0336, z: -8.72349}
+  m_LocalRotation: {x: 0.0063948557, y: 0, z: 0, w: 0.99997956}
+  m_LocalPosition: {x: -1.4355106, y: 413.66162, z: -9.858212}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2129,12 +2129,16 @@ PrefabInstance:
       value: 0.25
       objectReference: {fileID: 0}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: mouseSensitivity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: rotationalDamping
       value: 0.97
       objectReference: {fileID: 0}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: lockCameraToHorizon
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: rollSensitivityMultiplier
@@ -2143,6 +2147,10 @@ PrefabInstance:
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: useProgressiveRollResponse
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6377420842793545612, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: blurThresholdSpeed
+      value: 1000
       objectReference: {fileID: 0}
     - target: {fileID: 8418229091600320973, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2184,7 +2192,8 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 5819441568358368419, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

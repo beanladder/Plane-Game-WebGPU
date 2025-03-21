@@ -8,7 +8,7 @@ Shader "Custom/PropellerBlur"
         _ShimmerSpeed ("Shimmer Speed", Range(0, 10)) = 2
         _ShimmerScale ("Shimmer Scale", Range(1, 50)) = 20
         _ShimmerIntensity ("Shimmer Intensity", Range(0, 1)) = 0.0
-        _RotationSpeed ("Rotation Speed", Range(0, 10)) = 2
+        _RotationSpeed ("Rotation Speed", Range(0, 10)) = 2.5 // Default rotation speed
         _BladeCount ("Blade Count", Range(2, 8)) = 4
         [Toggle] _EmissiveBlur ("Emissive Blur", Float) = 1
         _EmissiveStrength ("Emissive Strength", Range(0, 3)) = 1.0
@@ -84,7 +84,7 @@ Shader "Custom/PropellerBlur"
                 float2 centered_uv = i.uv - center;
                 
                 // Calculate continuous rotation angle
-                float rotation_angle = _Time.y * _RotationSpeed * 10.0; // Speed multiplier
+                float rotation_angle = _Time.y * _RotationSpeed; // Use _RotationSpeed property
                 float2 rotated_uv;
                 float sin_rot, cos_rot;
                 sincos(rotation_angle, sin_rot, cos_rot);
