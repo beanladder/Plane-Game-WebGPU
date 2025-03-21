@@ -119,6 +119,17 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!114 &44022486 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3529345245943720596, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+  m_PrefabInstance: {fileID: 1662531110}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &518876319
 GameObject:
   m_ObjectHideFlags: 0
@@ -301,7 +312,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 5000
-  field of view: 60
+  field of view: 50
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -424,15 +435,83 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3529345245943720596, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: Lens.FieldOfView
-      value: 60
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 3529345245943720596, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: Lens.FarClipPlane
       value: 5000
       objectReference: {fileID: 0}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: cam
+      value: 
+      objectReference: {fileID: 44022486}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: invertRollAxis
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: invertPitchAxis
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: mouseSensitivity
       value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[1].time
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[2].time
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[0].value
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[1].value
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[2].value
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[0].inSlope
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[1].inSlope
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[0].outSlope
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[1].inWeight
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[1].outSlope
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[1].outWeight
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[0].tangentMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: fovTransitionCurve.m_Curve.Array.data[1].tangentMode
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7580971882511161951, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_LocalPosition.y

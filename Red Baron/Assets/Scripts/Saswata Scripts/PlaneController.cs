@@ -1,13 +1,22 @@
 using UnityEngine;
-
+using Unity.Cinemachine;
 public class PlaneController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Rigidbody rb;
 
+    [Header("Camera Settings")]
+    [SerializeField] private CinemachineCamera cam;
+    [SerializeField] private float defaultFov = 50f;
+    [SerializeField] private float maxFov = 60f;
+    [SerializeField] private float fovSmoothSpeed = 2f;
+    [SerializeField] private AnimationCurve fovTransitionCurve = AnimationCurve.Linear(0, 0, 1, 1);
+
     [Header("Movement Settings")]
+    [SerializeField] private bool invertRollAxis = true;
+    [SerializeField] private bool invertPitchAxis = true;
     [SerializeField] public float airNormalSpeed = 30f;
-    [SerializeField] public float airBoostSpeed = 50f;
+    [SerializeField] public float airBoostSpeed = 80f;
     [SerializeField] private float accelerationRate = 1f;
     [SerializeField] private float decelerationRate = 0.5f;
     [SerializeField] private float mouseSensitivity = 2f;
@@ -65,9 +74,14 @@ public class PlaneController : MonoBehaviour
     // Reference to the camera (if needed)
     private Camera mainCamera;
     private Transform cameraTransform;
+    
 
     private void Start()
     {
+        if(cam != null)
+        {
+            cam.Lens.FieldOfView = defaultFov;
+        }
         // Get reference to the Rigidbody if not set in the Inspector
         if (rb == null)
             rb = GetComponent<Rigidbody>();
@@ -102,10 +116,13 @@ public class PlaneController : MonoBehaviour
         float throttleInput = Input.GetKey(KeyCode.W) ? 1f : (Input.GetKey(KeyCode.S) ? -0.5f : 0f);
 
         // Get base pitch input from mouse Y-axis
-        float rawPitchInput = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        float inversePitchFactor = invertPitchAxis ? 1f : -1f;
+        float inverseRollFactor = invertRollAxis ? 1f : -1f;
+
+        float rawPitchInput = Input.GetAxis("Mouse Y") * mouseSensitivity * inversePitchFactor;
 
         // Get base roll input from mouse X-axis
-        float rawRollInput = -Input.GetAxis("Mouse X") * mouseSensitivity;
+        float rawRollInput = Input.GetAxis("Mouse X") * mouseSensitivity * inverseRollFactor;
 
         // Apply sensitivity schemes
         targetPitchInput = ApplyPitchSensitivityScheme(rawPitchInput);
@@ -137,6 +154,7 @@ public class PlaneController : MonoBehaviour
             Vector3 cameraEuler = cameraTransform.localEulerAngles;
             cameraTransform.localEulerAngles = new Vector3(cameraEuler.x, cameraEuler.y, -transform.eulerAngles.z);
         }
+        UpdateCameraFOV();
     }
 
     private float ApplyPitchSensitivityScheme(float input)
@@ -260,5 +278,21 @@ public class PlaneController : MonoBehaviour
         {
             Debug.Log($"Roll Velocity: {rollVelocity}, Input: {rollInput}");
         }
+    }
+    private void UpdateCameraFOV()
+    {
+        if (cam == null) return;
+
+        // Normalize speed between 0 (normal speed) and 1 (boost speed)
+        float speedFactor = Mathf.InverseLerp(airNormalSpeed, airBoostSpeed, currentSpeed);
+
+        // Get transition effect from curve (affects how quickly it moves towards maxFOV)
+        float curveFactor = fovTransitionCurve.Evaluate(speedFactor);
+
+        // Calculate target FOV based on curve influence
+        float targetFOV = Mathf.Lerp(defaultFov, maxFov, curveFactor);
+
+        // Smooth transition
+        cam.Lens.FieldOfView = Mathf.Lerp(cam.Lens.FieldOfView, targetFOV, Time.deltaTime * fovSmoothSpeed);
     }
 }

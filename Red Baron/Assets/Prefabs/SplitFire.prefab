@@ -353,6 +353,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rb: {fileID: 0}
+  cam: {fileID: 3529345245943720596}
+  defaultFov: 50
+  maxFov: 60
+  fovSmoothSpeed: 2
   airNormalSpeed: 30
   airBoostSpeed: 50
   accelerationRate: 1
