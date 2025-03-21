@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: WingGuns
   m_EditorClassIdentifier: 
   weaponName: Machine Gun
-  bullet: {fileID: 0}
+  bullet: {fileID: 11400000, guid: d0f70daaa4257d1479f7134cf287886c, type: 2}
+  bulletPrefab: {fileID: 1359298541796545082, guid: 4e9efbbef14558947a2ab250c74f4a16, type: 3}
   fireRate: 0.1
   alternateFire: 1
+  firePoints: []
