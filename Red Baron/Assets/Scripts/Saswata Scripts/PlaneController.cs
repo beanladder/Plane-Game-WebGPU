@@ -102,7 +102,7 @@ public class PlaneController : MonoBehaviour
         float throttleInput = Input.GetKey(KeyCode.W) ? 1f : (Input.GetKey(KeyCode.S) ? -0.5f : 0f);
 
         // Get base pitch input from mouse Y-axis
-        float rawPitchInput = -Input.GetAxis("Mouse Y") * mouseSensitivity;
+        float rawPitchInput = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
         // Get base roll input from mouse X-axis
         float rawRollInput = -Input.GetAxis("Mouse X") * mouseSensitivity;
