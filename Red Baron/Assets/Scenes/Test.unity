@@ -2116,42 +2116,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: SplitFire
       objectReference: {fileID: 0}
-    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: rollSpeed
-      value: 25
-      objectReference: {fileID: 0}
-    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: maxRollAngle
-      value: 360
-      objectReference: {fileID: 0}
-    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: inputSmoothTime
-      value: 0.25
-      objectReference: {fileID: 0}
-    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: mouseSensitivity
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: rotationalDamping
-      value: 0.97
-      objectReference: {fileID: 0}
-    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: lockCameraToHorizon
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: rollSensitivityMultiplier
-      value: 0.07
-      objectReference: {fileID: 0}
-    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: useProgressiveRollResponse
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6377420842793545612, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
-      propertyPath: blurThresholdSpeed
-      value: 1000
-      objectReference: {fileID: 0}
     - target: {fileID: 8418229091600320973, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_LocalPosition.x
       value: -1.4355106
@@ -2192,8 +2156,7 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 5819441568358368419, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
