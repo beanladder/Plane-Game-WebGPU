@@ -1,30 +1,50 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
-using Unity.Cinemachine;
 
 public class CrosshairController : MonoBehaviour
 {
-    public CinemachineCamera cinemachineCam; // Assign your CinemachineCamera
-    public RectTransform crosshairUI; // Assign your UI crosshair (RectTransform)
-    public Camera mainCamera; // Assign your main camera
+    public Transform plane;
+    public RectTransform crosshairUI;
+    public float crosshairDistance = 500f;
+    public float smoothing = 10f;
 
-    private void Awake()
+    private Camera mainCam;
+    private Vector3 crosshairWorldPosition; // Stores world position
+
+    public Vector3 GetCrosshairWorldPosition()
     {
-        mainCamera = Camera.main;
-        cinemachineCam = GetComponent<CinemachineCamera>();
+        return crosshairWorldPosition;
     }
+
+    void Start()
+    {
+        mainCam = Camera.main;
+
+        if (crosshairUI == null)
+            Debug.LogError("❌ Crosshair UI not assigned!");
+
+        if (plane == null)
+            Debug.LogError("❌ Plane reference missing!");
+    }
+
     void Update()
     {
-        if (cinemachineCam == null || crosshairUI == null || mainCamera == null)
-            return;
+        if (plane == null || crosshairUI == null) return;
 
-        // Get the world-space aim point (where the camera is looking)
-        Vector3 aimTargetWorldPos = cinemachineCam.State.ReferenceLookAt;
+        // Calculate crosshair position in world space
+        Vector3 projectedPoint = plane.position + (plane.forward * crosshairDistance) + (plane.up * -50f);
 
-        // Convert world position to screen-space
-        Vector3 screenPos = mainCamera.WorldToScreenPoint(aimTargetWorldPos);
+        // Convert world point to screen space
+        Vector3 screenPos = mainCam.WorldToScreenPoint(projectedPoint);
 
-        // Update the UI crosshair position
-        crosshairUI.position = screenPos;
+        // Ensure crosshair remains visible on screen
+        if (screenPos.z > 0)
+        {
+            Vector3 smoothPos = Vector3.Lerp(crosshairUI.position, screenPos, Time.deltaTime * smoothing);
+            crosshairUI.position = smoothPos;
+        }
+
+        // Store world position for bullets to use
+        crosshairWorldPosition = projectedPoint;
     }
 }

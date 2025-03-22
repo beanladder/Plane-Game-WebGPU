@@ -3,7 +3,11 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewBullet", menuName = "Weapons/Bullet")]
 public class BulletData : ScriptableObject
 {
-    public float damage = 10f;
-    public float speed = 100f;
-    public float range = 500f; // Distance before disappearing
+    public string bulletName;
+    public GameObject bulletPrefab;
+    public float damage;
+    public float speed;
+    public float range;
+    public float accuracy; // Spread amount
+    public float fireRate; // Fire delay
 }

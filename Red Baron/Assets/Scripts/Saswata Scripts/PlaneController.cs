@@ -112,7 +112,7 @@ public class PlaneController : MonoBehaviour
             cameraTransform = mainCamera.transform;
         }
 
-        Debug.Log("Plane Controller initialized in flying mode");
+        //Debug.Log("Plane Controller initialized in flying mode");
     }
 
     private void Update()
@@ -303,7 +303,7 @@ public class PlaneController : MonoBehaviour
         // Debug logging when there are significant velocity changes
         if (Mathf.Abs(rollVelocity) > 5f)
         {
-            Debug.Log($"Roll Velocity: {rollVelocity}, Input: {rollInput}");
+            //Debug.Log($"Roll Velocity: {rollVelocity}, Input: {rollInput}");
         }
     }
     private void UpdateCameraFOV()

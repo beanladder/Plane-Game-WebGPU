@@ -1,30 +1,32 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
     private float damage;
+    private float speed;
     private float range;
     private Vector3 startPosition;
 
     public void Initialize(BulletData bulletData)
     {
         damage = bulletData.damage;
+        speed = bulletData.speed;
         range = bulletData.range;
         startPosition = transform.position;
     }
 
     void Update()
     {
-        // Destroy bullet if it exceeds range
-        if (Vector3.Distance(startPosition, transform.position) > range)
-        {
-            Destroy(gameObject);
-        }
+      
+            transform.position += transform.forward * speed * Time.deltaTime;
+            Debug.Log($"🚀 Bullet Moving: {gameObject.name} | Position: {transform.position}");
+        
+
     }
 
     void OnTriggerEnter(Collider other)
     {
-        // Handle damage logic here
+        Debug.Log($"💥 Bullet Hit: {other.gameObject.name}");
         Destroy(gameObject);
     }
 }

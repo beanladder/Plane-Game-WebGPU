@@ -406,8 +406,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1379101565}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.10764607, y: 0.0000000063448744, z: -6.8699263e-10, w: 0.9941893}
-  m_LocalPosition: {x: -989, y: 25.039999, z: -3351.0898}
+  m_LocalRotation: {x: 0.10194669, y: -3.5177067e-15, z: 3.6049675e-16, w: 0.9947899}
+  m_LocalPosition: {x: -989, y: 24.99, z: -3351.49}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -507,6 +507,11 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!4 &1463207803 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8418229091600320973, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+  m_PrefabInstance: {fileID: 1662531110}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1662531110
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -515,14 +520,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 209655646717814407, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 582188818987882882, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1749110562298686092, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_Name
       value: SplitFire
       objectReference: {fileID: 0}
+    - target: {fileID: 2621845072540887578, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: plane
+      value: 
+      objectReference: {fileID: 1463207803}
     - target: {fileID: 2621845072540887578, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_Enabled
       value: 1
