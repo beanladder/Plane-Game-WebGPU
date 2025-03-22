@@ -494,7 +494,7 @@ Camera:
   m_ShutterSpeed: 0.005
   m_Aperture: 6.41
   m_FocusDistance: 10
-  m_FocalLength: 60
+  m_FocalLength: 49.999996
   m_BladeCount: 5
   m_Curvature: {x: 2, y: 11}
   m_BarrelClipping: 0.25
@@ -508,8 +508,8 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 1000
-  field of view: 6.8672605
+  far clip plane: 5000
+  field of view: 8.23638
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -1815,6 +1815,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rb: {fileID: 1908528211}
+  cam: {fileID: 0}
+  defaultFov: 50
+  maxFov: 60
+  fovSmoothSpeed: 2
+  fovTransitionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  invertRollAxis: 1
+  invertPitchAxis: 1
   airNormalSpeed: 30
   airBoostSpeed: 50
   accelerationRate: 1
@@ -1990,6 +2020,14 @@ PrefabInstance:
     - target: {fileID: 1749110562298686092, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_Name
       value: SplitFire
+      objectReference: {fileID: 0}
+    - target: {fileID: 2621845072540887578, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: mainCamera
+      value: 
+      objectReference: {fileID: 88502973}
+    - target: {fileID: 3529345245943720596, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: Lens.FieldOfView
+      value: 8.23638
       objectReference: {fileID: 0}
     - target: {fileID: 8418229091600320973, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_LocalPosition.x
