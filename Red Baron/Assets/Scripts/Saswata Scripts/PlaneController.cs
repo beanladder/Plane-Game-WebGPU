@@ -7,6 +7,10 @@ public class PlaneController : MonoBehaviour
 
     [Header("Camera Settings")]
     [SerializeField] private CinemachineCamera cam;
+    [SerializeField] private CinemachineCamera freeLookCam;
+    [SerializeField] private int defaultCamPriority = 10;
+    [SerializeField] private int freeLookCamPriority = 20;
+    public bool isFreeLookActive = false;
     [SerializeField] private float defaultFov = 50f;
     [SerializeField] private float maxFov = 60f;
     [SerializeField] private float fovSmoothSpeed = 2f;
@@ -82,6 +86,7 @@ public class PlaneController : MonoBehaviour
         {
             cam.Lens.FieldOfView = defaultFov;
         }
+        
         // Get reference to the Rigidbody if not set in the Inspector
         if (rb == null)
             rb = GetComponent<Rigidbody>();
@@ -112,6 +117,19 @@ public class PlaneController : MonoBehaviour
 
     private void Update()
     {
+        //Switch between default cam and freeLook cam
+        if (Input.GetMouseButton(2))
+        {
+            freeLookCam.Priority = freeLookCamPriority;
+            cam.Priority = 0;
+            isFreeLookActive = true;
+        }
+        else
+        {
+            freeLookCam.Priority = 0;
+            cam.Priority = defaultCamPriority;
+            isFreeLookActive = false;
+        }
         // Get throttle input
         float throttleInput = Input.GetKey(KeyCode.W) ? 1f : (Input.GetKey(KeyCode.S) ? -0.5f : 0f);
 
@@ -154,7 +172,12 @@ public class PlaneController : MonoBehaviour
             Vector3 cameraEuler = cameraTransform.localEulerAngles;
             cameraTransform.localEulerAngles = new Vector3(cameraEuler.x, cameraEuler.y, -transform.eulerAngles.z);
         }
-        UpdateCameraFOV();
+        if (!isFreeLookActive)
+        {
+            UpdateCameraFOV();
+        }
+        
+        
     }
 
     private float ApplyPitchSensitivityScheme(float input)
@@ -223,7 +246,11 @@ public class PlaneController : MonoBehaviour
         currentSpeed = Mathf.SmoothDamp(currentSpeed, targetSpeed, ref speedSmoothVelocity, 1f / rate);
 
         // Apply rotations
-        ApplyRotation();
+        if (!isFreeLookActive)
+        {
+            ApplyRotation();
+        }
+        
 
         // Apply forward movement
         rb.linearVelocity = transform.forward * currentSpeed;
