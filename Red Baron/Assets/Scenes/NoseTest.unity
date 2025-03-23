@@ -440,6 +440,31 @@ MonoBehaviour:
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 0
+--- !u!4 &660616833 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8961842717391837645, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+  m_PrefabInstance: {fileID: 1662531110}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &673786026 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 760592551650964820, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+  m_PrefabInstance: {fileID: 1662531110}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &726398772 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8305767108210342830, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+  m_PrefabInstance: {fileID: 1662531110}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1226491305 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7009971154636509919, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+  m_PrefabInstance: {fileID: 1662531110}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1246163638 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2885433460807659673, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+  m_PrefabInstance: {fileID: 1662531110}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1379101565
 GameObject:
   m_ObjectHideFlags: 0
@@ -641,9 +666,37 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -4524582034204000687, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: machineGun4x
+      value: 
+      objectReference: {fileID: 726398772}
+    - target: {fileID: -4524582034204000687, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: machineGun4xBullet
+      value: 
+      objectReference: {fileID: 11400000, guid: df5d72876f01f3449ad7a06c0c198cb7, type: 2}
+    - target: {fileID: -4524582034204000687, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: firePoints4x.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: -4524582034204000687, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: 'firePoints4x.Array.data[0]'
+      value: 
+      objectReference: {fileID: 1246163638}
+    - target: {fileID: -4524582034204000687, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: 'firePoints4x.Array.data[1]'
+      value: 
+      objectReference: {fileID: 660616833}
+    - target: {fileID: -4524582034204000687, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: 'firePoints4x.Array.data[2]'
+      value: 
+      objectReference: {fileID: 1226491305}
+    - target: {fileID: -4524582034204000687, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: 'firePoints4x.Array.data[3]'
+      value: 
+      objectReference: {fileID: 673786026}
     - target: {fileID: 209655646717814407, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 582188818987882882, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_IsActive
@@ -652,6 +705,10 @@ PrefabInstance:
     - target: {fileID: 1749110562298686092, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_Name
       value: SplitFire
+      objectReference: {fileID: 0}
+    - target: {fileID: 2432062762336293467, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2621845072540887578, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: plane
@@ -684,10 +741,14 @@ PrefabInstance:
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: planeStats
       value: 
-      objectReference: {fileID: 11400000, guid: bd6ea9e41a0d520438003b9af61caf84, type: 2}
+      objectReference: {fileID: 11400000, guid: 62382d86b5c7d7f4d83ec5221c5a829e, type: 2}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: invertPitchAxis
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5440113698780095776, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5713643107787201249, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: m_LocalPosition.y

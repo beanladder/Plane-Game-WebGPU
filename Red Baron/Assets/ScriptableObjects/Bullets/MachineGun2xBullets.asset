@@ -15,7 +15,9 @@ MonoBehaviour:
   bulletName: Normal
   bulletPrefab: {fileID: 8957537386711024947, guid: 9f947b6fe24921f43917dd1bd51ac579, type: 3}
   damage: 40
-  speed: 700
+  speed: 1200
   range: 1
   accuracy: 10
-  fireRate: 0.2
+  fireRate: 0.1
+  magazineSize: 200
+  reloadTime: 2
