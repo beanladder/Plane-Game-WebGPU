@@ -19,7 +19,7 @@ public class Bullet : MonoBehaviour
     {
       
             transform.position += transform.forward * speed * Time.deltaTime;
-            Debug.Log($"🚀 Bullet Moving: {gameObject.name} | Position: {transform.position}");
+            //Debug.Log($"🚀 Bullet Moving: {gameObject.name} | Position: {transform.position}");
         
 
     }

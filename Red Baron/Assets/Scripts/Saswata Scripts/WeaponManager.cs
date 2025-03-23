@@ -3,11 +3,11 @@ using System.Collections;
 
 public class WeaponManager : MonoBehaviour
 {
-    [Header("Weapons")]
-    public GameObject machineGun2x; // Only Machine Gun (2x) available for now
+    [Header("Weapon")]
+    public GameObject machineGun2x; // Only Machine Gun (2x) available
 
     [Header("Fire Points")]
-    public Transform[] firePoints2x;
+    public Transform[] firePoints2x; // Fire points for Machine Gun (2x)
 
     [Header("Bullet Data")]
     public BulletData machineGun2xBullet;
@@ -21,12 +21,22 @@ public class WeaponManager : MonoBehaviour
     void Start()
     {
         mainCam = Camera.main;
-        SelectWeapon(2); // Only Machine Gun (2x) exists
+        SelectWeapon(2); // Default to Machine Gun (2x)
+    }
+
+    void Update()
+    {
+        // Fire bullets when left click is pressed
+        if (Input.GetButton("Fire1") && canShoot)
+        {
+            StartCoroutine(FireWeapon());
+        }
     }
 
     public void SelectWeapon(int weaponType)
     {
-        if (machineGun2x != null) machineGun2x.SetActive(false);
+        if (machineGun2x != null)
+            machineGun2x.SetActive(false);
 
         if (weaponType == 2 && machineGun2x != null)
         {
@@ -42,14 +52,6 @@ public class WeaponManager : MonoBehaviour
 
         activeWeapon.SetActive(true);
         Debug.Log($"✅ Weapon Selected: {activeWeapon.name}");
-    }
-
-    void Update()
-    {
-        if (Input.GetButton("Fire1") && canShoot)
-        {
-            StartCoroutine(FireWeapon());
-        }
     }
 
     IEnumerator FireWeapon()
@@ -73,13 +75,7 @@ public class WeaponManager : MonoBehaviour
 
     void FireBullet(Transform firePoint)
     {
-        if (mainCam == null)
-        {
-            Debug.LogError("❌ Main Camera is NULL!");
-            return;
-        }
-
-        // Get Crosshair's world position from CrosshairController
+        // Get accurate crosshair world position
         CrosshairController crosshairController = FindFirstObjectByType<CrosshairController>();
         if (crosshairController == null)
         {
@@ -88,16 +84,9 @@ public class WeaponManager : MonoBehaviour
         }
 
         Vector3 targetPoint = crosshairController.GetCrosshairWorldPosition();
-
-        // Calculate direction from the fire point to the crosshair
         Vector3 shootDirection = (targetPoint - firePoint.position).normalized;
 
-        // Apply bullet spread (accuracy)
-        float spreadAmount = activeBulletData.accuracy;
-        shootDirection.x += Random.Range(-spreadAmount, spreadAmount);
-        shootDirection.y += Random.Range(-spreadAmount, spreadAmount);
-
-        // Spawn bullet
+        // Instantiate bullet at fire point
         GameObject bullet = Instantiate(activeBulletData.bulletPrefab, firePoint.position, Quaternion.LookRotation(shootDirection));
 
         if (bullet == null)
@@ -106,7 +95,7 @@ public class WeaponManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"✅ Bullet Fired Toward Crosshair! Fire Point: {firePoint.position} → Crosshair: {targetPoint}");
+        Debug.Log($"✅ Bullet Fired from {firePoint.position} to {targetPoint}");
 
         Rigidbody rb = bullet.GetComponent<Rigidbody>();
         if (rb == null)
@@ -115,9 +104,14 @@ public class WeaponManager : MonoBehaviour
             return;
         }
 
+        // Apply velocity
         rb.linearVelocity = shootDirection * activeBulletData.speed;
         Debug.Log($"🚀 Bullet Velocity Set: {rb.linearVelocity}");
+
+        // Destroy bullet after a set time (e.g., 5 seconds)
+        Destroy(bullet, 2f);
     }
+
 
 
 }

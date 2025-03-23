@@ -11,10 +11,7 @@ public class CrosshairController : MonoBehaviour
     private Camera mainCam;
     private Vector3 crosshairWorldPosition; // Stores world position
 
-    public Vector3 GetCrosshairWorldPosition()
-    {
-        return crosshairWorldPosition;
-    }
+    
 
     void Start()
     {
@@ -47,4 +44,22 @@ public class CrosshairController : MonoBehaviour
         // Store world position for bullets to use
         crosshairWorldPosition = projectedPoint;
     }
+    public Vector3 GetCrosshairWorldPosition()
+    {
+        if (crosshairUI == null || mainCam == null)
+        {
+            Debug.LogError("❌ Crosshair UI or Camera not assigned!");
+            return Vector3.zero;
+        }
+
+        // Convert UI crosshair screen position to world space
+        Vector3 screenPos = crosshairUI.position;
+        screenPos.z = crosshairDistance; // Maintain the projected distance
+
+        Vector3 worldPos = mainCam.ScreenToWorldPoint(screenPos);
+
+        Debug.Log($"🎯 Crosshair World Position: {worldPos}");
+        return worldPos;
+    }
+
 }
