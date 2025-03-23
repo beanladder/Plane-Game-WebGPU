@@ -100,8 +100,12 @@ public class PropellerController : MonoBehaviour
 
     private void Update()
     {
+        // Get the plane stats for proper values
+        PlaneStats planeStats = GetPlaneStats();
+        if (planeStats == null) return;
+
         // Calculate rotation speed based on plane's current speed
-        float speedRatio = Mathf.InverseLerp(planeController.airNormalSpeed, planeController.airBoostSpeed, planeController.currentSpeed);
+        float speedRatio = Mathf.InverseLerp(planeStats.airNormalSpeed, planeStats.airBoostSpeed, planeController.currentSpeed);
         currentRotationSpeed = Mathf.Lerp(minRotationSpeed, maxRotationSpeed, speedRatio);
 
         // Rotate the propeller blades if they're active
@@ -123,7 +127,7 @@ public class PropellerController : MonoBehaviour
         // Update blur shader properties
         if (blurCylinder != null && blurCylinder.activeInHierarchy)
         {
-            UpdateBlurShader();
+            UpdateBlurShader(planeStats);
         }
 
         // Update audio properties
@@ -163,7 +167,36 @@ public class PropellerController : MonoBehaviour
         }
     }
 
-    private void UpdateBlurShader()
+    // Helper method to safely get plane stats
+    private PlaneStats GetPlaneStats()
+    {
+        if (planeController == null)
+        {
+            Debug.LogWarning("PlaneController reference is missing!", this);
+            return null;
+        }
+
+        // Use reflection to access the private field
+        System.Reflection.FieldInfo fieldInfo = typeof(PlaneController).GetField("planeStats",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        if (fieldInfo == null)
+        {
+            Debug.LogWarning("Cannot access planeStats field on PlaneController!", this);
+            return null;
+        }
+
+        PlaneStats stats = fieldInfo.GetValue(planeController) as PlaneStats;
+        if (stats == null)
+        {
+            Debug.LogWarning("PlaneStats is null on PlaneController!", this);
+            return null;
+        }
+
+        return stats;
+    }
+
+    private void UpdateBlurShader(PlaneStats planeStats)
     {
         // Calculate opacity based on speed (faster = less opaque)
         float opacity = Mathf.Lerp(maxOpacity, minOpacity, Mathf.InverseLerp(blurThresholdSpeed, maxRotationSpeed, currentRotationSpeed));
@@ -172,7 +205,7 @@ public class PropellerController : MonoBehaviour
         float shimmerSpeed = Mathf.Lerp(shimmerSpeedMin, shimmerSpeedMax, Mathf.InverseLerp(minRotationSpeed, maxRotationSpeed, currentRotationSpeed));
 
         // Calculate rotation speed for shader (2.5 to 7.5)
-        float shaderRotationSpeed = Mathf.Lerp(2.5f, 7.5f, Mathf.InverseLerp(planeController.airNormalSpeed, planeController.airBoostSpeed, planeController.currentSpeed));
+        float shaderRotationSpeed = Mathf.Lerp(2.5f, 7.5f, Mathf.InverseLerp(planeStats.airNormalSpeed, planeStats.airBoostSpeed, planeController.currentSpeed));
 
         // Update shader properties using property block
         Renderer renderer = blurCylinder.GetComponent<Renderer>();

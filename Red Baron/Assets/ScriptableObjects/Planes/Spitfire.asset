@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4f9fec5032523640bd0a5b14adffb22, type: 3}
+  m_Name: Spitfire
+  m_EditorClassIdentifier: 
+  planeName: Spitfire
+  planeDescription: 2nd best movement, high health and fast repair
+  maxHealth: 325
+  repairAmount: 40
+  repairTime: 5
+  invertRollAxis: 1
+  invertPitchAxis: 1
+  airNormalSpeed: 28
+  airBoostSpeed: 47
+  accelerationRate: 0.95
+  decelerationRate: 0.47
+  mouseSensitivity: 9.5
+  maxRollAngle: 360
+  rollSpeed: 24
+  pitchSpeed: 0.19
+  yawSpeed: 0.095
+  rotationalDamping: 0.96
+  rollDamping: 0.97
+  pitchSensitivityMultiplier: 0.95
+  rollSensitivityMultiplier: 0.065
+  useExponentialPitchResponse: 1
+  useProgressiveRollResponse: 0
+  exponentialPitchFactor: 1.5
+  progressiveRollThreshold: 0.3
+  progressiveRollMultiplier: 1.5
+  inputSmoothTime: 0.26
+  keyboardSmoothTime: 0.98
+  lockCameraToHorizon: 1
+  defaultFov: 50
+  maxFov: 58
+  fovSmoothSpeed: 1.9

@@ -151,13 +151,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c6a6df342b52d24092cf6bbb590c535, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  waveHeight: 0.5
-  waveFrequency: 0.5
-  waveLength: 0.75
-  waveOriginPosition: {x: 0, y: 0, z: 0}
-  meshFilter: {fileID: 0}
-  mesh: {fileID: 0}
-  vertices: []
 --- !u!65 &49357439
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -609,7 +602,7 @@ MonoBehaviour:
     DefaultMode: 2
   DefaultBlend:
     Style: 3
-    Time: 2
+    Time: 1
     CustomCurve:
       serializedVersion: 2
       m_Curve:
@@ -684,6 +677,14 @@ PrefabInstance:
       propertyPath: TrackerSettings.PositionDamping.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: switchKey
+      value: 114
+      objectReference: {fileID: 0}
+    - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
+      propertyPath: planeStats
+      value: 
+      objectReference: {fileID: 11400000, guid: bd6ea9e41a0d520438003b9af61caf84, type: 2}
     - target: {fileID: 3941120898537564756, guid: 05afbb2ef0c9a8443ae2098bb4964b65, type: 3}
       propertyPath: invertPitchAxis
       value: 1

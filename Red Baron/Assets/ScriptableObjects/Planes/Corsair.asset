@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4f9fec5032523640bd0a5b14adffb22, type: 3}
+  m_Name: Corsair
+  m_EditorClassIdentifier: 
+  planeName: Corsair
+  planeDescription: 3rd best movement, lower health but good repair value
+  maxHealth: 210
+  repairAmount: 50
+  repairTime: 10
+  invertRollAxis: 1
+  invertPitchAxis: 1
+  airNormalSpeed: 25
+  airBoostSpeed: 45
+  accelerationRate: 0.9
+  decelerationRate: 0.45
+  mouseSensitivity: 9
+  maxRollAngle: 320
+  rollSpeed: 22
+  pitchSpeed: 0.18
+  yawSpeed: 0.09
+  rotationalDamping: 0.95
+  rollDamping: 96
+  pitchSensitivityMultiplier: 0.9
+  rollSensitivityMultiplier: 0.06
+  useExponentialPitchResponse: 1
+  useProgressiveRollResponse: 0
+  exponentialPitchFactor: 1.5
+  progressiveRollThreshold: 0.3
+  progressiveRollMultiplier: 1.5
+  inputSmoothTime: 0.27
+  keyboardSmoothTime: 0.96
+  lockCameraToHorizon: 1
+  defaultFov: 50
+  maxFov: 56
+  fovSmoothSpeed: 1.8

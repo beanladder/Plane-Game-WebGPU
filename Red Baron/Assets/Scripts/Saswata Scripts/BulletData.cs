@@ -10,4 +10,6 @@ public class BulletData : ScriptableObject
     public float range;
     public float accuracy; // Spread amount
     public float fireRate; // Fire delay
+    public int magazineSize; // Max rounds per mag
+    public float reloadTime; // Reload duration
 }

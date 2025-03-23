@@ -1,9 +1,11 @@
 using UnityEngine;
 using Unity.Cinemachine;
+
 public class PlaneController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Rigidbody rb;
+    [SerializeField] private PlaneStats planeStats;
 
     [Header("Camera Settings")]
     [SerializeField] private CinemachineCamera cam;
@@ -11,50 +13,13 @@ public class PlaneController : MonoBehaviour
     [SerializeField] private int defaultCamPriority = 10;
     [SerializeField] private int freeLookCamPriority = 20;
     public bool isFreeLookActive = false;
-    [SerializeField] private float defaultFov = 50f;
-    [SerializeField] private float maxFov = 60f;
-    [SerializeField] private float fovSmoothSpeed = 2f;
     [SerializeField] private AnimationCurve fovTransitionCurve = AnimationCurve.Linear(0, 0, 1, 1);
-
-    [Header("Movement Settings")]
-    [SerializeField] private bool invertRollAxis = true;
-    [SerializeField] private bool invertPitchAxis = true;
-    [SerializeField] public float airNormalSpeed = 30f;
-    [SerializeField] public float airBoostSpeed = 80f;
-    [SerializeField] private float accelerationRate = 1f;
-    [SerializeField] private float decelerationRate = 0.5f;
-    [SerializeField] private float mouseSensitivity = 2f;
-    [SerializeField] private float maxRollAngle = 360f;
-    [SerializeField] private float rollSpeed = 2f;
-    [SerializeField] private float pitchSpeed = 2f;
-    [SerializeField] private float yawSpeed = 1f;
-
-    [Header("Inertia Settings")]
-    [SerializeField] private float rotationalDamping = 0.97f; // Higher values (closer to 1) mean slower deceleration
-    [SerializeField] private float rollDamping = 0.98f; // Specific damping for roll to make it even smoother
-
-    [Header("Sensitivity Schemes")]
-    [Range(0, 2)]
-    [SerializeField] private float pitchSensitivityMultiplier = 1f;
-    [Range(0, 2)]
-    [SerializeField] private float rollSensitivityMultiplier = 1f;
-    [SerializeField] private bool useExponentialPitchResponse = false;
-    [SerializeField] private bool useProgressiveRollResponse = false;
-    [SerializeField] private float exponentialPitchFactor = 1.5f;
-    [SerializeField] private float progressiveRollThreshold = 0.3f;
-    [SerializeField] private float progressiveRollMultiplier = 1.5f;
-
-    [Header("Input Smoothing")]
-    [SerializeField] private float inputSmoothTime = 0.1f;
-    [SerializeField] private float keyboardSmoothTime = 0.15f;
-
-    [Header("Camera Settings")]
-    [SerializeField] private bool lockCameraToHorizon = true;
 
     // Public state variables for monitoring
     public float currentSpeed = 0f;
     public float targetSpeed = 0f;
     public Vector3 currentRotation;
+    public float currentHealth;
 
     // Private state variables
     private float rollInput = 0f;
@@ -75,18 +40,30 @@ public class PlaneController : MonoBehaviour
     private float yawVelocity = 0f;
     private float speedSmoothVelocity;
 
-    // Reference to the camera (if needed)
+    // Reference to the camera
     private Camera mainCamera;
     private Transform cameraTransform;
-    
+
+    // Repair variables
+    private bool isRepairing = false;
+    private float repairTimer = 0f;
 
     private void Start()
     {
-        if(cam != null)
+        if (planeStats == null)
         {
-            cam.Lens.FieldOfView = defaultFov;
+            Debug.LogError("PlaneStats not assigned to PlaneController!");
+            return;
         }
-        
+
+        // Initialize health
+        currentHealth = planeStats.maxHealth;
+
+        if (cam != null)
+        {
+            cam.Lens.FieldOfView = planeStats.defaultFov;
+        }
+
         // Get reference to the Rigidbody if not set in the Inspector
         if (rb == null)
             rb = GetComponent<Rigidbody>();
@@ -102,8 +79,8 @@ public class PlaneController : MonoBehaviour
         rb.angularDamping = 0f;
 
         // Initialize with normal flying speed
-        currentSpeed = airNormalSpeed;
-        targetSpeed = airNormalSpeed;
+        currentSpeed = planeStats.airNormalSpeed;
+        targetSpeed = planeStats.airNormalSpeed;
 
         // Get camera reference
         mainCamera = Camera.main;
@@ -112,11 +89,25 @@ public class PlaneController : MonoBehaviour
             cameraTransform = mainCamera.transform;
         }
 
-        //Debug.Log("Plane Controller initialized in flying mode");
+        Debug.Log($"Plane Controller initialized for {planeStats.planeName}");
     }
 
     private void Update()
     {
+        // Handle repair
+        if (isRepairing)
+        {
+            HandleRepair();
+            return; // Don't process other inputs while repairing
+        }
+
+        // Check for repair initiation
+        if (Input.GetKeyDown(KeyCode.R) && currentHealth < planeStats.maxHealth)
+        {
+            StartRepair();
+            return;
+        }
+
         //Switch between default cam and freeLook cam
         if (Input.GetMouseButton(2))
         {
@@ -130,17 +121,18 @@ public class PlaneController : MonoBehaviour
             cam.Priority = defaultCamPriority;
             isFreeLookActive = false;
         }
+
         // Get throttle input
         float throttleInput = Input.GetKey(KeyCode.W) ? 1f : (Input.GetKey(KeyCode.S) ? -0.5f : 0f);
 
         // Get base pitch input from mouse Y-axis
-        float inversePitchFactor = invertPitchAxis ? 1f : -1f;
-        float inverseRollFactor = invertRollAxis ? 1f : -1f;
+        float inversePitchFactor = planeStats.invertPitchAxis ? 1f : -1f;
+        float inverseRollFactor = planeStats.invertRollAxis ? 1f : -1f;
 
-        float rawPitchInput = Input.GetAxis("Mouse Y") * mouseSensitivity * inversePitchFactor;
+        float rawPitchInput = Input.GetAxis("Mouse Y") * planeStats.mouseSensitivity * inversePitchFactor;
 
         // Get base roll input from mouse X-axis
-        float rawRollInput = Input.GetAxis("Mouse X") * mouseSensitivity * inverseRollFactor;
+        float rawRollInput = Input.GetAxis("Mouse X") * planeStats.mouseSensitivity * inverseRollFactor;
 
         // Apply sensitivity schemes
         targetPitchInput = ApplyPitchSensitivityScheme(rawPitchInput);
@@ -155,9 +147,9 @@ public class PlaneController : MonoBehaviour
             targetYawInput = 0f;
 
         // Smooth all inputs
-        pitchInput = Mathf.SmoothDamp(pitchInput, targetPitchInput, ref smoothPitchVelocity, inputSmoothTime);
-        rollInput = Mathf.SmoothDamp(rollInput, targetRollInput, ref smoothRollVelocity, inputSmoothTime);
-        yawInput = Mathf.SmoothDamp(yawInput, targetYawInput, ref smoothYawVelocity, keyboardSmoothTime);
+        pitchInput = Mathf.SmoothDamp(pitchInput, targetPitchInput, ref smoothPitchVelocity, planeStats.inputSmoothTime);
+        rollInput = Mathf.SmoothDamp(rollInput, targetRollInput, ref smoothRollVelocity, planeStats.inputSmoothTime);
+        yawInput = Mathf.SmoothDamp(yawInput, targetYawInput, ref smoothYawVelocity, planeStats.keyboardSmoothTime);
 
         // Handle air movement
         HandleFlying(throttleInput);
@@ -166,34 +158,33 @@ public class PlaneController : MonoBehaviour
         currentRotation = transform.eulerAngles;
 
         // Update camera if needed
-        if (lockCameraToHorizon && cameraTransform != null && cameraTransform.parent == transform)
+        if (planeStats.lockCameraToHorizon && cameraTransform != null && cameraTransform.parent == transform)
         {
             // This will keep the camera upright regardless of the plane's roll
             Vector3 cameraEuler = cameraTransform.localEulerAngles;
             cameraTransform.localEulerAngles = new Vector3(cameraEuler.x, cameraEuler.y, -transform.eulerAngles.z);
         }
+
         if (!isFreeLookActive)
         {
             UpdateCameraFOV();
         }
-        
-        
     }
 
     private float ApplyPitchSensitivityScheme(float input)
     {
         // Apply base sensitivity multiplier
-        float modifiedInput = input * pitchSensitivityMultiplier;
+        float modifiedInput = input * planeStats.pitchSensitivityMultiplier;
 
         // Apply exponential response if enabled
-        if (useExponentialPitchResponse)
+        if (planeStats.useExponentialPitchResponse)
         {
             // Preserve the sign while applying exponential curve
             float sign = Mathf.Sign(modifiedInput);
             float absValue = Mathf.Abs(modifiedInput);
 
             // Apply exponential response for more precision at center, more response at extremes
-            modifiedInput = sign * Mathf.Pow(absValue, exponentialPitchFactor);
+            modifiedInput = sign * Mathf.Pow(absValue, planeStats.exponentialPitchFactor);
         }
 
         return modifiedInput;
@@ -202,19 +193,19 @@ public class PlaneController : MonoBehaviour
     private float ApplyRollSensitivityScheme(float input)
     {
         // Apply base sensitivity multiplier
-        float modifiedInput = input * rollSensitivityMultiplier;
+        float modifiedInput = input * planeStats.rollSensitivityMultiplier;
 
         // Apply progressive response if enabled
-        if (useProgressiveRollResponse)
+        if (planeStats.useProgressiveRollResponse)
         {
             // Apply progressive response - faster response after threshold
-            if (Mathf.Abs(modifiedInput) > progressiveRollThreshold)
+            if (Mathf.Abs(modifiedInput) > planeStats.progressiveRollThreshold)
             {
-                float exceededAmount = Mathf.Abs(modifiedInput) - progressiveRollThreshold;
-                float extraResponse = exceededAmount * progressiveRollMultiplier;
+                float exceededAmount = Mathf.Abs(modifiedInput) - planeStats.progressiveRollThreshold;
+                float extraResponse = exceededAmount * planeStats.progressiveRollMultiplier;
 
                 modifiedInput = Mathf.Sign(modifiedInput) *
-                    (progressiveRollThreshold + extraResponse);
+                    (planeStats.progressiveRollThreshold + extraResponse);
             }
         }
 
@@ -226,21 +217,21 @@ public class PlaneController : MonoBehaviour
         // Set target speed based on throttle
         if (throttleInput > 0)
         {
-            targetSpeed = Mathf.Lerp(airNormalSpeed, airBoostSpeed, throttleInput);
+            targetSpeed = Mathf.Lerp(planeStats.airNormalSpeed, planeStats.airBoostSpeed, throttleInput);
         }
         else if (throttleInput < 0)
         {
             // Allow slowing down
-            targetSpeed = Mathf.Lerp(airNormalSpeed, airNormalSpeed * 0.5f, -throttleInput);
+            targetSpeed = Mathf.Lerp(planeStats.airNormalSpeed, planeStats.airNormalSpeed * 0.5f, -throttleInput);
         }
         else
         {
             // Cruise at normal speed when no input
-            targetSpeed = airNormalSpeed;
+            targetSpeed = planeStats.airNormalSpeed;
         }
 
         // Determine rate to use based on whether we're speeding up or slowing down
-        float rate = currentSpeed < targetSpeed ? accelerationRate : decelerationRate;
+        float rate = currentSpeed < targetSpeed ? planeStats.accelerationRate : planeStats.decelerationRate;
 
         // Smoothly adjust current speed with proper acceleration/deceleration
         currentSpeed = Mathf.SmoothDamp(currentSpeed, targetSpeed, ref speedSmoothVelocity, 1f / rate);
@@ -250,7 +241,6 @@ public class PlaneController : MonoBehaviour
         {
             ApplyRotation();
         }
-        
 
         // Apply forward movement
         rb.linearVelocity = transform.forward * currentSpeed;
@@ -259,9 +249,9 @@ public class PlaneController : MonoBehaviour
     private void ApplyRotation()
     {
         // Calculate target velocities based on inputs
-        float targetRollVelocity = rollInput * rollSpeed * 100f;
-        float targetPitchVelocity = pitchInput * pitchSpeed * 100f;
-        float targetYawVelocity = yawInput * yawSpeed * 100f;
+        float targetRollVelocity = rollInput * planeStats.rollSpeed * 100f;
+        float targetPitchVelocity = pitchInput * planeStats.pitchSpeed * 100f;
+        float targetYawVelocity = yawInput * planeStats.yawSpeed * 100f;
 
         // Smoothly transition between current velocity and target velocity
         if (Mathf.Abs(rollInput) > 0.01f)
@@ -272,7 +262,7 @@ public class PlaneController : MonoBehaviour
         else
         {
             // When no input, apply damping to gradually reduce velocity
-            rollVelocity *= rollDamping;
+            rollVelocity *= planeStats.rollDamping;
         }
 
         // Same for pitch
@@ -282,7 +272,7 @@ public class PlaneController : MonoBehaviour
         }
         else
         {
-            pitchVelocity *= rotationalDamping;
+            pitchVelocity *= planeStats.rotationalDamping;
         }
 
         // Same for yaw
@@ -292,34 +282,63 @@ public class PlaneController : MonoBehaviour
         }
         else
         {
-            yawVelocity *= rotationalDamping;
+            yawVelocity *= planeStats.rotationalDamping;
         }
 
         // Apply the actual rotations based on the velocities
         transform.Rotate(Vector3.right * pitchVelocity * Time.deltaTime, Space.Self);
         transform.Rotate(Vector3.up * yawVelocity * Time.deltaTime, Space.Self);
         transform.Rotate(Vector3.forward * rollVelocity * Time.deltaTime, Space.Self);
-
-        // Debug logging when there are significant velocity changes
-        if (Mathf.Abs(rollVelocity) > 5f)
-        {
-            //Debug.Log($"Roll Velocity: {rollVelocity}, Input: {rollInput}");
-        }
     }
+
     private void UpdateCameraFOV()
     {
         if (cam == null) return;
 
         // Normalize speed between 0 (normal speed) and 1 (boost speed)
-        float speedFactor = Mathf.InverseLerp(airNormalSpeed, airBoostSpeed, currentSpeed);
+        float speedFactor = Mathf.InverseLerp(planeStats.airNormalSpeed, planeStats.airBoostSpeed, currentSpeed);
 
         // Get transition effect from curve (affects how quickly it moves towards maxFOV)
         float curveFactor = fovTransitionCurve.Evaluate(speedFactor);
 
         // Calculate target FOV based on curve influence
-        float targetFOV = Mathf.Lerp(defaultFov, maxFov, curveFactor);
+        float targetFOV = Mathf.Lerp(planeStats.defaultFov, planeStats.maxFov, curveFactor);
 
         // Smooth transition
-        cam.Lens.FieldOfView = Mathf.Lerp(cam.Lens.FieldOfView, targetFOV, Time.deltaTime * fovSmoothSpeed);
+        cam.Lens.FieldOfView = Mathf.Lerp(cam.Lens.FieldOfView, targetFOV, Time.deltaTime * planeStats.fovSmoothSpeed);
+    }
+
+    // Health and repair methods
+    public void TakeDamage(float damageAmount)
+    {
+        currentHealth = Mathf.Max(0, currentHealth - damageAmount);
+
+        if (currentHealth <= 0)
+        {
+            // Implement plane destruction logic here
+            Debug.Log($"{planeStats.planeName} has been destroyed!");
+        }
+    }
+
+    private void StartRepair()
+    {
+        isRepairing = true;
+        repairTimer = 0f;
+
+        // Optional: disable movement controls, play repair animation, etc.
+        Debug.Log($"Starting repair for {planeStats.planeName}");
+    }
+
+    private void HandleRepair()
+    {
+        repairTimer += Time.deltaTime;
+
+        if (repairTimer >= planeStats.repairTime)
+        {
+            // Repair complete
+            currentHealth = Mathf.Min(planeStats.maxHealth, currentHealth + planeStats.repairAmount);
+            isRepairing = false;
+            Debug.Log($"Repair complete. Health: {currentHealth}/{planeStats.maxHealth}");
+        }
     }
 }
