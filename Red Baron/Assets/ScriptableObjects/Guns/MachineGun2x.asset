@@ -17,7 +17,11 @@ MonoBehaviour:
   damage: 40
   speed: 1200
   range: 500
-  accuracy: 10
   fireRate: 0.1
   magazineSize: 200
   reloadTime: 2
+  baseAccuracy: 0.8
+  accuracyLossPerShot: 0.05
+  maxAccuracyLoss: 0.3
+  accuracyRecoveryRate: 1
+  maxCrosshairDrift: 100
