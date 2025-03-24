@@ -17,7 +17,7 @@ MonoBehaviour:
   maxHealth: 300
   repairAmount: 60
   repairTime: 6
-  invertRollAxis: 1
+  invertRollAxis: 0
   invertPitchAxis: 1
   airNormalSpeed: 29
   airBoostSpeed: 48
