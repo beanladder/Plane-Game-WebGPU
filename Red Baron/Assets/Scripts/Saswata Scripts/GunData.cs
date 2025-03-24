@@ -1,9 +1,9 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "NewBullet", menuName = "Weapons/Bullet")]
-public class BulletData : ScriptableObject
+[CreateAssetMenu(fileName = "NewGun", menuName = "Weapons/Gun")]
+public class GunData : ScriptableObject
 {
-    public string bulletName;
+    public string gunName;
     public GameObject bulletPrefab;
     public float damage;
     public float speed;

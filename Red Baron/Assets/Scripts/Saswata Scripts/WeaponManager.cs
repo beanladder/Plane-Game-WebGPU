@@ -34,13 +34,13 @@ public class WeaponManager : MonoBehaviour
 
     [Header("Bullet Data")]
 
-    public BulletData machineGun1xBullet;
+    public GunData machineGun1xBullet;
 
-    public BulletData machineGun2xBullet;
+    public GunData machineGun2xBullet;
 
-    public BulletData machineGun4xBullet;
+    public GunData machineGun4xBullet;
 
-    public BulletData cannonBullet;
+    public GunData cannonBullet;
 
 
 
@@ -48,7 +48,7 @@ public class WeaponManager : MonoBehaviour
 
     private Transform[] activeFirePoints;
 
-    private BulletData activeBulletData;
+    private GunData activeBulletData;
 
     private bool canShoot = true;
 

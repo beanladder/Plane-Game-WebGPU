@@ -7,11 +7,11 @@ public class Bullet : MonoBehaviour
     private float range;
     private Vector3 startPosition;
 
-    public void Initialize(BulletData bulletData)
+    public void Initialize(GunData gunData)
     {
-        damage = bulletData.damage;
-        speed = bulletData.speed;
-        range = bulletData.range;
+        damage = gunData.damage;
+        speed = gunData.speed;
+        range = gunData.range;
         startPosition = transform.position;
     }
 
