@@ -1,393 +1,173 @@
 ﻿using UnityEngine;
-
 using System.Collections;
-
-
+using System.Collections.Generic;
 
 public class WeaponManager : MonoBehaviour
-
 {
-
-    [Header("Weapons")]
-
-    public GameObject machineGun1x;
-
-    public GameObject machineGun2x;
-
-    public GameObject machineGun4x;
-
-    public GameObject cannon1x;
-
-
-
-    [Header("Fire Points")]
-
-    public Transform firePoint1x;
-
-    public Transform[] firePoints2x;
-
-    public Transform[] firePoints4x;
-
-    public Transform firePointCannon;
-
-
-
-    [Header("Bullet Data")]
-
-    public GunData machineGun1xBullet;
-
-    public GunData machineGun2xBullet;
-
-    public GunData machineGun4xBullet;
-
-    public GunData cannonBullet;
-
-
-
-    private GameObject activeWeapon;
-
-    private Transform[] activeFirePoints;
-
-    private GunData activeBulletData;
-
+    // Weapon System
+    private Transform[] firePoints;
+    private GunData activeGunData;
     private bool canShoot = true;
-
     private bool isReloading = false;
+    public int currentAmmo;
+    private CrosshairController crosshairController;
 
-    private int currentAmmo;
+    // Accuracy System
+    private float currentAccuracy;
+    private float accuracyRecoveryTimer;
+    private Queue<GameObject> bulletPool = new Queue<GameObject>();
 
-    private Camera mainCam;
-
-
-
-    void Start()
-
+    public void InitializeWeapon(string weaponName, List<Transform> firePointsList, GunData gunData)
     {
+        firePoints = firePointsList.ToArray();
+        activeGunData = gunData;
+        currentAmmo = activeGunData.magazineSize;
+        crosshairController = FindFirstObjectByType<CrosshairController>();
+        currentAccuracy = activeGunData.baseAccuracy;
 
-        mainCam = Camera.main;
+        InitializeBulletPool();
+        UpdateCrosshairAccuracy();
 
-        DisableAllWeapons(); // Start with all weapons disabled
-
+        Debug.Log($"🔫 {weaponName} initialized | Accuracy: {currentAccuracy:P0}");
     }
-
-
 
     void Update()
-
     {
+        HandleShootingInput();
+        HandleReloadInput();
+        RecoverAccuracy();
+    }
 
-        // Weapon switching
-
-        if (Input.GetKeyDown(KeyCode.Alpha1)) SelectWeapon(1);
-
-        if (Input.GetKeyDown(KeyCode.Alpha2)) SelectWeapon(2);
-
-        if (Input.GetKeyDown(KeyCode.Alpha3)) SelectWeapon(3);
-
-        if (Input.GetKeyDown(KeyCode.Alpha4)) SelectWeapon(4);
-
-
-
-        // Fire bullets when left click is pressed
-
+    void HandleShootingInput()
+    {
         if (Input.GetButton("Fire1") && canShoot && !isReloading)
-
         {
-
             if (currentAmmo > 0)
-
             {
-
                 StartCoroutine(FireWeapon());
-
             }
-
             else
-
             {
-
-                StartCoroutine(Reload());
-
+                Debug.Log("⚠️ Out of ammo! Press R to reload");
             }
-
         }
-
     }
 
-
-
-    private void SelectWeapon(int weaponType)
-
+    void HandleReloadInput()
     {
-
-        DisableAllWeapons();
-
-        isReloading = false;
-
-
-
-        switch (weaponType)
-
+        if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmo < activeGunData.magazineSize)
         {
-
-            case 1:
-
-                if (machineGun1x != null)
-
-                {
-
-                    activeWeapon = machineGun1x;
-
-                    activeFirePoints = new Transform[] { firePoint1x };
-
-                    activeBulletData = machineGun1xBullet;
-
-                    machineGun1x.SetActive(true);
-
-                    Debug.Log("✅ Machine Gun (1x) Activated");
-
-                }
-
-                break;
-
-            case 2:
-
-                if (machineGun2x != null)
-
-                {
-
-                    activeWeapon = machineGun2x;
-
-                    activeFirePoints = firePoints2x;
-
-                    activeBulletData = machineGun2xBullet;
-
-                    machineGun2x.SetActive(true);
-
-                    Debug.Log("✅ Machine Gun (2x) Activated");
-
-                }
-
-                break;
-
-            case 3:
-
-                if (machineGun4x != null)
-
-                {
-
-                    activeWeapon = machineGun4x;
-
-                    activeFirePoints = firePoints4x;
-
-                    activeBulletData = machineGun4xBullet;
-
-                    machineGun4x.SetActive(true);
-
-                    Debug.Log("✅ Machine Gun (4x) Activated");
-
-                }
-
-                break;
-
-            case 4:
-
-                if (cannon1x != null)
-
-                {
-
-                    activeWeapon = cannon1x;
-
-                    activeFirePoints = new Transform[] { firePointCannon };
-
-                    activeBulletData = cannonBullet;
-
-                    cannon1x.SetActive(true);
-
-                    Debug.Log("✅ Cannon (1x) Activated");
-
-                }
-
-                break;
-
-            default:
-
-                Debug.LogError("❌ Invalid Weapon Type!");
-
-                return;
-
+            StartCoroutine(Reload());
         }
-
-
-
-        if (activeWeapon == null || activeFirePoints == null || activeBulletData == null)
-
-        {
-
-            Debug.LogError("❌ Selected weapon is not available!");
-
-            return;
-
-        }
-
-
-
-        currentAmmo = activeBulletData.magazineSize; // Refill ammo when switching
-
     }
 
-
-
-    private IEnumerator FireWeapon()
-
+    IEnumerator FireWeapon()
     {
-
-        if (activeWeapon == null || activeFirePoints.Length == 0 || activeBulletData == null)
-
-        {
-
-            Debug.LogError("❌ No Active Weapon or Fire Points!");
-
-            yield break;
-
-        }
-
-
-
         canShoot = false;
 
-
-
-        foreach (var firePoint in activeFirePoints)
-
+        foreach (var firePoint in firePoints)
         {
+            if (currentAmmo <= 0) break;
 
+            ApplyRecoil();
             FireBullet(firePoint);
-
+            currentAmmo--;
         }
 
-
-
-        currentAmmo--; // Reduce ammo count
-
-
-
-        yield return new WaitForSeconds(activeBulletData.fireRate);
-
+        yield return new WaitForSeconds(activeGunData.fireRate);
         canShoot = true;
-
     }
 
-
-
-    private void FireBullet(Transform firePoint)
-
+    void ApplyRecoil()
     {
+        currentAccuracy = Mathf.Clamp(
+            currentAccuracy - activeGunData.accuracyLossPerShot,
+            activeGunData.baseAccuracy - activeGunData.maxAccuracyLoss,
+            1f
+        );
+        UpdateCrosshairAccuracy();
+    }
 
-        CrosshairController crosshairController = FindFirstObjectByType<CrosshairController>();
-
-        if (crosshairController == null)
-
+    void RecoverAccuracy()
+    {
+        if (canShoot && !isReloading)
         {
-
-            Debug.LogError("❌ CrosshairController not found!");
-
-            return;
-
+            currentAccuracy = Mathf.Lerp(
+                currentAccuracy,
+                activeGunData.baseAccuracy,
+                Time.deltaTime * activeGunData.accuracyRecoveryRate
+            );
+            UpdateCrosshairAccuracy();
         }
+    }
 
+    void UpdateCrosshairAccuracy()
+    {
+        if (crosshairController != null)
+        {
+            crosshairController.UpdateAccuracy(currentAccuracy);
+        }
+    }
 
+    void FireBullet(Transform firePoint)
+    {
+        if (crosshairController == null) return;
 
         Vector3 targetPoint = crosshairController.GetCrosshairWorldPosition();
-
         Vector3 shootDirection = (targetPoint - firePoint.position).normalized;
 
-
-
-        GameObject bullet = Instantiate(activeBulletData.bulletPrefab, firePoint.position, Quaternion.LookRotation(shootDirection));
-
-
-
-        if (bullet == null)
-
-        {
-
-            Debug.LogError("❌ Bullet Instantiation Failed!");
-
-            return;
-
-        }
-
-
-
-        Debug.Log($"✅ Bullet Fired from {firePoint.position} to {targetPoint}");
-
-
+        GameObject bullet = GetPooledBullet();
+        bullet.transform.SetPositionAndRotation(firePoint.position, Quaternion.LookRotation(shootDirection));
+        bullet.SetActive(true);
 
         Rigidbody rb = bullet.GetComponent<Rigidbody>();
-
-        if (rb == null)
-
+        if (rb != null)
         {
-
-            Debug.LogError("❌ Bullet Prefab Missing Rigidbody!");
-
-            return;
-
+            rb.linearVelocity = shootDirection * activeGunData.speed;
         }
 
-
-
-        rb.linearVelocity = shootDirection * activeBulletData.speed;
-
-        Debug.Log($"🚀 Bullet Velocity Set: {rb.linearVelocity}");
-
-
-
-        Destroy(bullet, 2f);
-
+        StartCoroutine(ReturnToPool(bullet, activeGunData.range / activeGunData.speed));
     }
 
-
-
-    private IEnumerator Reload()
-
+    IEnumerator Reload()
     {
-
-        if (isReloading) yield break;
-
         isReloading = true;
+        Debug.Log($"🔄 Reloading {activeGunData.gunName}...");
+        yield return new WaitForSeconds(activeGunData.reloadTime);
 
-
-
-        Debug.Log($"🔄 Reloading... ({activeBulletData.reloadTime}s)");
-
-        yield return new WaitForSeconds(activeBulletData.reloadTime);
-
-
-
-        currentAmmo = activeBulletData.magazineSize;
-
+        currentAmmo = activeGunData.magazineSize;
         isReloading = false;
-
-        Debug.Log("✅ Reload Complete!");
-
+        Debug.Log("✅ Reload complete");
     }
 
-
-
-    private void DisableAllWeapons()
-
+    void InitializeBulletPool()
     {
-
-        if (machineGun1x != null) machineGun1x.SetActive(false);
-
-        if (machineGun2x != null) machineGun2x.SetActive(false);
-
-        if (machineGun4x != null) machineGun4x.SetActive(false);
-
-        if (cannon1x != null) cannon1x.SetActive(false);
-
+        bulletPool.Clear();
+        for (int i = 0; i < activeGunData.magazineSize * 2; i++)
+        {
+            GameObject bullet = Instantiate(activeGunData.bulletPrefab);
+            bullet.SetActive(false);
+            bulletPool.Enqueue(bullet);
+        }
     }
 
+    GameObject GetPooledBullet()
+    {
+        if (bulletPool.Count > 0) return bulletPool.Dequeue();
+
+        // Emergency bullet if pool is empty
+        GameObject newBullet = Instantiate(activeGunData.bulletPrefab);
+        newBullet.SetActive(false);
+        return newBullet;
+    }
+
+    IEnumerator ReturnToPool(GameObject bullet, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (bullet.activeSelf)
+        {
+            bullet.SetActive(false);
+            bulletPool.Enqueue(bullet);
+        }
+    }
 }

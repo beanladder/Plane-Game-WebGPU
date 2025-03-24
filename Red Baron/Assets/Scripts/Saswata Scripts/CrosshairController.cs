@@ -3,63 +3,83 @@ using UnityEngine.UI;
 
 public class CrosshairController : MonoBehaviour
 {
+    [Header("References")]
     public Transform plane;
     public RectTransform crosshairUI;
     public float crosshairDistance = 500f;
     public float smoothing = 10f;
 
-    private Camera mainCam;
-    private Vector3 crosshairWorldPosition; // Stores world position
+    [Header("Drift Settings")]
+    public float maxDriftDistance = 40f;
+    public float driftSpeed = 8f;
+    public float returnSpeed = 5f;
 
-    
+    private Camera mainCam;
+    private Vector3 basePosition;
+    private Vector3 currentDrift;
+    private float currentAccuracy = 1f;
+    private float noiseOffsetX;
+    private float noiseOffsetY;
 
     void Start()
     {
         mainCam = Camera.main;
-
-        if (crosshairUI == null)
-            Debug.LogError("❌ Crosshair UI not assigned!");
-
-        if (plane == null)
-            Debug.LogError("❌ Plane reference missing!");
+        noiseOffsetX = Random.Range(0f, 100f);
+        noiseOffsetY = Random.Range(0f, 100f);
     }
 
     void Update()
     {
-        if (plane == null || crosshairUI == null) return;
+        if (!plane || !crosshairUI) return;
 
-        // Calculate crosshair position in world space
-        Vector3 projectedPoint = plane.position + (plane.forward * crosshairDistance) + (plane.up * -50f);
-
-        // Convert world point to screen space
-        Vector3 screenPos = mainCam.WorldToScreenPoint(projectedPoint);
-
-        // Ensure crosshair remains visible on screen
-        if (screenPos.z > 0)
-        {
-            Vector3 smoothPos = Vector3.Lerp(crosshairUI.position, screenPos, Time.deltaTime * smoothing);
-            crosshairUI.position = smoothPos;
-        }
-
-        // Store world position for bullets to use
-        crosshairWorldPosition = projectedPoint;
+        UpdateBasePosition();
+        ApplyAccuracyDrift();
+        UpdateCrosshairVisual();
     }
+
+    void UpdateBasePosition()
+    {
+        basePosition = plane.position +
+                      (plane.forward * crosshairDistance) +
+                      (plane.up * -50f);
+    }
+
+    void ApplyAccuracyDrift()
+    {
+        float inaccuracy = 1 - currentAccuracy;
+        float xNoise = Mathf.PerlinNoise(Time.time * driftSpeed, noiseOffsetX) * 2 - 1;
+        float yNoise = Mathf.PerlinNoise(noiseOffsetY, Time.time * driftSpeed) * 2 - 1;
+
+        Vector3 targetDrift = new Vector3(
+            xNoise * inaccuracy * maxDriftDistance,
+            yNoise * inaccuracy * maxDriftDistance,
+            0
+        );
+
+        currentDrift = Vector3.Lerp(currentDrift, targetDrift, Time.deltaTime * returnSpeed);
+    }
+
+    void UpdateCrosshairVisual()
+    {
+        Vector3 finalPosition = mainCam.WorldToScreenPoint(basePosition + currentDrift);
+
+        if (finalPosition.z > 0)
+        {
+            crosshairUI.position = Vector3.Lerp(
+                crosshairUI.position,
+                finalPosition,
+                Time.deltaTime * smoothing
+            );
+        }
+    }
+
+    public void UpdateAccuracy(float accuracy)
+    {
+        currentAccuracy = Mathf.Clamp01(accuracy);
+    }
+
     public Vector3 GetCrosshairWorldPosition()
     {
-        if (crosshairUI == null || mainCam == null)
-        {
-            Debug.LogError("❌ Crosshair UI or Camera not assigned!");
-            return Vector3.zero;
-        }
-
-        // Convert UI crosshair screen position to world space
-        Vector3 screenPos = crosshairUI.position;
-        screenPos.z = crosshairDistance; // Maintain the projected distance
-
-        Vector3 worldPos = mainCam.ScreenToWorldPoint(screenPos);
-
-        Debug.Log($"🎯 Crosshair World Position: {worldPos}");
-        return worldPos;
+        return basePosition + currentDrift;
     }
-
 }

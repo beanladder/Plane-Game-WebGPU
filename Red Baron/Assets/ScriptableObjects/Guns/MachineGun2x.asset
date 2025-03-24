@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17d6d0ecfec496e4b90b21fdefd83993, type: 3}
   m_Name: MachineGun2x
   m_EditorClassIdentifier: 
-  bulletName: Normal
+  gunName: MachineGun2x
   bulletPrefab: {fileID: 8957537386711024947, guid: 9f947b6fe24921f43917dd1bd51ac579, type: 3}
   damage: 40
   speed: 1200
-  range: 1
+  range: 500
   accuracy: 10
   fireRate: 0.1
   magazineSize: 200
