@@ -17,6 +17,10 @@ public class WeaponManager : MonoBehaviour
     private float accuracyRecoveryTimer;
     private Queue<GameObject> bulletPool = new Queue<GameObject>();
 
+    // Staggered Firing
+    [SerializeField] private float staggeredFireDelay = 0.08f;
+    private int currentPatternIndex;
+
     public void InitializeWeapon(string weaponName, List<Transform> firePointsList, GunData gunData)
     {
         firePoints = firePointsList.ToArray();
@@ -24,6 +28,7 @@ public class WeaponManager : MonoBehaviour
         currentAmmo = activeGunData.magazineSize;
         crosshairController = FindFirstObjectByType<CrosshairController>();
         currentAccuracy = activeGunData.baseAccuracy;
+        currentPatternIndex = 0;
 
         InitializeBulletPool();
         UpdateCrosshairAccuracy();
@@ -65,17 +70,46 @@ public class WeaponManager : MonoBehaviour
     {
         canShoot = false;
 
-        foreach (var firePoint in firePoints)
+        // Special firing pattern for MachineGun4x
+        if (activeGunData.gunName == "MachineGun4x" && firePoints.Length == 4)
         {
-            if (currentAmmo <= 0) break;
+            // Fire first pair (outer guns)
+            for (int i = 0; i < 2; i++)
+            {
+                if (currentAmmo <= 0) break;
+                FireBulletWithRecoil(firePoints[i]);
+                currentAmmo--;
+            }
 
-            ApplyRecoil();
-            FireBullet(firePoint);
-            currentAmmo--;
+            yield return new WaitForSeconds(staggeredFireDelay);
+
+            // Fire second pair (inner guns)
+            for (int i = 2; i < 4; i++)
+            {
+                if (currentAmmo <= 0) break;
+                FireBulletWithRecoil(firePoints[i]);
+                currentAmmo--;
+            }
+        }
+        else
+        {
+            // Default firing for other weapons
+            foreach (var firePoint in firePoints)
+            {
+                if (currentAmmo <= 0) break;
+                FireBulletWithRecoil(firePoint);
+                currentAmmo--;
+            }
         }
 
         yield return new WaitForSeconds(activeGunData.fireRate);
         canShoot = true;
+    }
+
+    void FireBulletWithRecoil(Transform firePoint)
+    {
+        ApplyRecoil();
+        FireBullet(firePoint);
     }
 
     void ApplyRecoil()
