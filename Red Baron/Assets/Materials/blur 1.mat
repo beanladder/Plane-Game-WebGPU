@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: blur 1
-  m_Shader: {fileID: 4800000, guid: 101f48cba58ec40cd9468f27720f8209, type: 3}
+  m_Shader: {fileID: 4800000, guid: d14be20e266af4ad99e8232cd5cdbe48, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -91,7 +91,7 @@ Material:
     - _Alpha: 0.5
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _BladeCount: 3
+    - _BladeCount: 3.07
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -104,7 +104,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EmissiveBlur: 1
-    - _EmissiveStrength: 0.36
+    - _EmissiveStrength: 0.33
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
@@ -114,7 +114,11 @@ Material:
     - _Opacity: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
+    - _RampSmoothing: 0.06
+    - _RampThreshold: 0.71
     - _ReceiveShadows: 1
+    - _RimIntensity: 0.5
+    - _RimPower: 1.59
     - _RotationSpeed: 7.5
     - _ShimmerIntensity: 0.174
     - _ShimmerScale: 14.8
@@ -122,11 +126,16 @@ Material:
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
+    - _SpecularIntensity: 1
+    - _SpecularSize: 0.06
+    - _SpecularSmoothness: 0.05
     - _Speed: 2
     - _SpeedFactor: 0
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
+    - _WaveFrequency: 11.3
+    - _WaveHeight: 0.199
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
@@ -134,8 +143,11 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _MainColor: {r: 0.70980394, g: 0.7137255, b: 0.7019608, a: 1}
-    - _ShimmerColor: {r: 0.2735849, g: 0.2735849, b: 0.2735849, a: 1}
+    - _RimColor: {r: 0.8, g: 0.8, b: 1, a: 1}
+    - _ShadowColor: {r: 0.29999998, g: 0.29999998, b: 0.29999998, a: 1}
+    - _ShimmerColor: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &4199137638839208582
