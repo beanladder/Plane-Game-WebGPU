@@ -1,6 +1,7 @@
 using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections;
+
 public class PlaneController : MonoBehaviour
 {
     [Header("References")]
@@ -19,7 +20,6 @@ public class PlaneController : MonoBehaviour
 
     private Coroutine resetFreeLookCoroutine;
     private float cameraBlendTime = 1.2f;
-
 
     // Public state variables for monitoring
     public float currentSpeed = 0f;
@@ -53,12 +53,6 @@ public class PlaneController : MonoBehaviour
     // Repair variables
     private bool isRepairing = false;
     private float repairTimer = 0f;
-
-    // Altitude resistance variables
-    private float altitudeResistanceFactor = 0f;
-    private Vector3 lastPosition;
-    private float verticalSpeed = 0f;
-    private bool isInAltitudeWarningZone = false;
 
     private void Start()
     {
@@ -101,11 +95,7 @@ public class PlaneController : MonoBehaviour
             cameraTransform = mainCamera.transform;
         }
 
-        // Initialize lastPosition for vertical speed calculation
-        lastPosition = transform.position;
-
         Debug.Log($"Plane Controller initialized for {planeStats.planeName}");
-
 
         if (freeLookCam != null)
         {
@@ -116,7 +106,6 @@ public class PlaneController : MonoBehaviour
                 initialVerticalAxisValue = orbitalFollow.VerticalAxis.Value;
             }
         }
-
     }
 
     private void Update()
@@ -153,7 +142,6 @@ public class PlaneController : MonoBehaviour
             cam.Priority = defaultCamPriority;
             isFreeLookActive = false;
         }
-
 
         // Get throttle input
         float throttleInput = Input.GetKey(KeyCode.W) ? 1f : (Input.GetKey(KeyCode.S) ? -0.5f : 0f);
@@ -219,8 +207,6 @@ public class PlaneController : MonoBehaviour
         }
     }
 
-
-
     private float ApplyPitchSensitivityScheme(float input)
     {
         // Apply base sensitivity multiplier
@@ -262,57 +248,12 @@ public class PlaneController : MonoBehaviour
         return modifiedInput;
     }
 
-    private float CalculateAltitudeResistance()
-    {
-        // Get current Y position (altitude)
-        float currentAltitude = transform.position.y;
-
-        // Check if we're above the max comfortable altitude
-        if (currentAltitude <= planeStats.maxAltitude)
-        {
-            return 0f; // No resistance below max altitude
-        }
-
-        // Calculate how far into the resistance zone we are (0 to 1)
-        float distanceIntoZone = currentAltitude - planeStats.maxAltitude;
-        float zoneProgress = Mathf.Clamp01(distanceIntoZone / planeStats.altitudeResistanceZone);
-
-        // Apply non-linear curve to the resistance (makes it increase more dramatically)
-        float resistance = Mathf.Pow(zoneProgress, planeStats.altitudeResistanceCurve);
-
-        // Scale by the maximum resistance amount
-        return resistance * planeStats.maxAltitudeResistance;
-    }
-
     private void HandleFlying(float throttleInput)
     {
-        // Calculate vertical speed
-        if (Time.deltaTime > 0)
-        {
-            verticalSpeed = (transform.position.y - lastPosition.y) / Time.deltaTime;
-        }
-        lastPosition = transform.position;
-
-        // Calculate altitude resistance
-        altitudeResistanceFactor = CalculateAltitudeResistance();
-
-        // Update warning zone state for feedback
-        bool previousWarningState = isInAltitudeWarningZone;
-        isInAltitudeWarningZone = transform.position.y > planeStats.maxAltitude;
-
-        // Provide feedback when entering warning zone
-        if (planeStats.enableAltitudeWarning && !previousWarningState && isInAltitudeWarningZone)
-        {
-            Debug.Log("Warning: Approaching maximum altitude. Reduced thrust.");
-            // You could trigger audio or visual feedback here
-        }
-
-        // Set target speed based on throttle and altitude resistance
+        // Set target speed based on throttle
         if (throttleInput > 0)
         {
-            float adjustedSpeed = Mathf.Lerp(planeStats.airNormalSpeed, planeStats.airBoostSpeed, throttleInput);
-            // Apply altitude resistance to speed
-            targetSpeed = adjustedSpeed * (1f - altitudeResistanceFactor);
+            targetSpeed = Mathf.Lerp(planeStats.airNormalSpeed, planeStats.airBoostSpeed, throttleInput);
         }
         else if (throttleInput < 0)
         {
@@ -321,8 +262,8 @@ public class PlaneController : MonoBehaviour
         }
         else
         {
-            // Cruise at normal speed when no input, with altitude resistance
-            targetSpeed = planeStats.airNormalSpeed * (1f - altitudeResistanceFactor);
+            // Cruise at normal speed when no input
+            targetSpeed = planeStats.airNormalSpeed;
         }
 
         // Determine rate to use based on whether we're speeding up or slowing down
@@ -340,20 +281,8 @@ public class PlaneController : MonoBehaviour
         // Calculate basic forward velocity
         Vector3 forwardVelocity = transform.forward * currentSpeed;
 
-        // If climbing and in resistance zone, apply downward force proportional to vertical speed
-        if (verticalSpeed > 0 && altitudeResistanceFactor > 0)
-        {
-            // Calculate a downward force that increases with altitude and vertical speed
-            Vector3 downwardForce = Vector3.down * (verticalSpeed * planeStats.verticalSpeedReductionFactor * altitudeResistanceFactor);
-
-            // Apply the combined velocity
-            rb.linearVelocity = forwardVelocity + downwardForce;
-        }
-        else
-        {
-            // Normal velocity outside resistance zone
-            rb.linearVelocity = forwardVelocity;
-        }
+        // Apply the velocity
+        rb.linearVelocity = forwardVelocity;
     }
 
     private void ApplyRotation()

@@ -49,12 +49,4 @@ public class PlaneStats : ScriptableObject
     public float defaultFov = 50f;
     public float maxFov = 60f;
     public float fovSmoothSpeed = 2f;
-
-    [Header("Altitude Restrictions")]
-    public float maxAltitude = 1000f;                  // Maximum comfortable altitude
-    public float altitudeResistanceZone = 200f;        // Height of the transition zone above maxAltitude
-    public float maxAltitudeResistance = 0.8f;         // Maximum thrust reduction (0-1)
-    public float altitudeResistanceCurve = 2f;         // How quickly the resistance increases (higher = sharper)
-    public bool enableAltitudeWarning = true;          // Visual or audio feedback when approaching max altitude
-    public float verticalSpeedReductionFactor = 0.5f;  // How much to reduce vertical climbing ability
 }
