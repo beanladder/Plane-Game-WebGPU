@@ -32,16 +32,14 @@ public class PlaneStats : ScriptableObject
     public float diveSpeedBoost = 0.4f;
     [Tooltip("Speed penalty when climbing (nose up)")]
     public float climbSpeedPenalty = 0.5f;
-    [Tooltip("Pitch angle that triggers stall warnings")]
-    public float stallWarningAngle = 30f;
-    [Tooltip("Pitch angle that may cause stalling")]
-    public float stallAngleThreshold = 40f;
-    [Tooltip("How much airspeed is lost during a stall")]
-    public float stallSpeedPenalty = 0.6f;
-    [Tooltip("Time needed to fully recover from a stall")]
-    public float stallRecoveryTime = 3f;
     [Tooltip("Strength of gravity's influence")]
-    public float gravityInfluence = 9.8f;
+    public float gravitationalForce = 9.8f;
+
+    [Header("Altitude Limits")]
+    public float maxAltitude = 500f;
+    public float altitudeWarningBuffer = 100f;
+    public float freefallDuration = 3f;
+    public float freefallRotationSpeed = 15f;
 
     [Header("Inertia Settings")]
     public float rotationalDamping = 0.97f;
@@ -67,6 +65,14 @@ public class PlaneStats : ScriptableObject
     public float defaultFov = 50f;
     public float maxFov = 60f;
     public float fovSmoothSpeed = 2f;
+    public float cameraBlendTime = 1.2f;
+
+    [Header("Debug Settings")]
+    public Color normalTextColor = Color.white;
+    public Color pitchUpColor = Color.yellow;
+    public Color pitchDownColor = Color.cyan;
+    public Color speedIncreasingColor = Color.green;
+    public Color speedDecreasingColor = Color.red;
 
     [Header("Audio & Visual Effects")]
     public AudioClip stallWarningSound;

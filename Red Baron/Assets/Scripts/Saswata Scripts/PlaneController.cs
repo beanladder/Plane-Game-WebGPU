@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Unity.Cinemachine;
 using System.Collections;
 
@@ -18,16 +18,20 @@ public class PlaneController : MonoBehaviour
     private float initialHorizontalAxisValue;
     private float initialVerticalAxisValue;
 
-    [Header("Stalling & Flight Physics")]
-    [SerializeField] private float stallAngleThreshold = 40f;
-    [SerializeField] private float stallRecoveryTime = 3f;
-    [SerializeField] private float stallSpeedPenalty = 0.6f;
+    [Header("Flight Physics")]
     [SerializeField] private float pitchSpeedInfluence = 0.3f;
     [SerializeField] private float diveSpeedBoost = 0.4f;
     [SerializeField] private float climbSpeedPenalty = 0.5f;
-    [SerializeField] private ParticleSystem stallWarningEffect;
-    [SerializeField] private AudioSource stallWarningSound;
     [SerializeField] private float gravitationalForce = 9.8f;
+
+    [Header("Altitude Limit")]
+    [SerializeField] private float maxAltitude = 500f;
+    [SerializeField] private float altitudeWarningBuffer = 100f;
+    [SerializeField] private float freefallDuration = 3f;
+    [SerializeField] private float freefallRotationSpeed = 15f;
+    [SerializeField] private ParticleSystem altitudeWarningEffect;
+    [SerializeField] private AudioSource altitudeWarningSound;
+    [SerializeField] private bool isFreeFalling;
 
     [Header("Debug Settings")]
     [SerializeField] private Color normalTextColor = Color.white;
@@ -45,10 +49,11 @@ public class PlaneController : MonoBehaviour
     public float targetSpeed = 0f;
     public Vector3 currentRotation;
     public float currentHealth;
-    public bool isStalling = false;
+    public bool isFreefalling = false;
     public float currentPitchAngle = 0f;
     public float previousPitchAngle = 0f;
-    public float stallWarningLevel = 0f;
+    public float altitudeWarningLevel = 0f;
+    public float currentAltitude = 0f;
 
     // Debug state flags
     public bool isPitchingUp = false;
@@ -76,10 +81,8 @@ public class PlaneController : MonoBehaviour
     private float yawVelocity = 0f;
     private float speedSmoothVelocity;
 
-    // Stalling variables
-    private float stallTimer = 0f;
-    private float stallRecoveryCounter = 0f;
-    private Vector3 stallRotation = Vector3.zero;
+    // Freefall variables
+    private float freefallTimer = 0f;
     private float controlReductionFactor = 1f;
 
     // Reference to the camera
@@ -139,6 +142,7 @@ public class PlaneController : MonoBehaviour
 
         Debug.Log($"Plane Controller initialized for {planeStats.planeName}");
 
+
         if (freeLookCam != null)
         {
             var orbitalFollow = freeLookCam.GetComponent<CinemachineOrbitalFollow>();
@@ -149,11 +153,11 @@ public class PlaneController : MonoBehaviour
             }
         }
 
-        // Disable stall effects initially
-        if (stallWarningEffect != null)
-            stallWarningEffect.Stop();
-        if (stallWarningSound != null)
-            stallWarningSound.Stop();
+        // Disable altitude warning effects initially
+        if (altitudeWarningEffect != null)
+            altitudeWarningEffect.Stop();
+        if (altitudeWarningSound != null)
+            altitudeWarningSound.Stop();
 
         // Initialize pitch angle
         currentPitchAngle = NormalizePitchAngle(transform.eulerAngles.x);
@@ -172,6 +176,9 @@ public class PlaneController : MonoBehaviour
         // Store previous values for comparison
         previousSpeed = currentSpeed;
         previousPitchAngle = currentPitchAngle;
+
+        // Update current altitude for monitoring
+        currentAltitude = transform.position.y;
 
         // Check for repair initiation
         if (Input.GetKeyDown(KeyCode.R) && currentHealth < planeStats.maxHealth)
@@ -226,8 +233,8 @@ public class PlaneController : MonoBehaviour
         else
             targetYawInput = 0f;
 
-        // Apply control reduction during stall recovery
-        if (isStalling || stallRecoveryCounter > 0)
+        // Apply control reduction during freefall recovery
+        if (isFreefalling || freefallTimer > 0)
         {
             targetPitchInput *= controlReductionFactor;
             targetRollInput *= controlReductionFactor;
@@ -251,8 +258,8 @@ public class PlaneController : MonoBehaviour
         // Update debug state flags
         UpdateDebugFlags();
 
-        // Check for stalling condition
-        CheckStallCondition();
+        // Check for altitude limit condition
+        CheckAltitudeLimit();
 
         // Update camera if needed
         if (planeStats.lockCameraToHorizon && cameraTransform != null && cameraTransform.parent == transform)
@@ -289,149 +296,110 @@ public class PlaneController : MonoBehaviour
         return angle;
     }
 
-    private void CheckStallCondition()
+    private void CheckAltitudeLimit()
     {
-        // Calculate the absolute pitch angle
-        float absPitchAngle = Mathf.Abs(currentPitchAngle);
+        // Calculate warning level (0-1) based on proximity to max altitude
+        altitudeWarningLevel = Mathf.Clamp01((currentAltitude - (planeStats.maxAltitude - planeStats.altitudeWarningBuffer)) / planeStats.altitudeWarningBuffer);
 
-        // In Unity, positive pitch actually means nose down, negative means nose up
-        // (this is the core fix - the original logic was inverted)
-        bool stallRisk = absPitchAngle > stallAngleThreshold &&
-                          currentPitchAngle < 0 && // Only stall on negative pitch (climbing)
-                          currentSpeed < planeStats.airNormalSpeed * 0.8f;
+        // Manage altitude warning effects
+        ManageAltitudeWarningEffects();
 
-        // Calculate stall warning level (0-1) for effects and sound
-        stallWarningLevel = Mathf.Clamp01((absPitchAngle - stallAngleThreshold + 10) / 20) *
-                           (1 - (currentSpeed / planeStats.airNormalSpeed));
-
-        // Manage stall warning effects
-        ManageStallWarningEffects();
-
-        // If we're already stalling, handle the stall state
-        if (isStalling)
+        // If we're already in freefall, handle that state
+        if (isFreefalling)
         {
-            HandleStallingState();
+            HandleFreefallState();
             return;
         }
 
-        // Check if we should enter a stall
-        if (stallRisk)
+        // Check if we've exceeded max altitude
+        if (currentAltitude >= planeStats.maxAltitude)
         {
-            stallTimer += Time.deltaTime;
-
-            // If we've been at risk of stalling for too long, initiate stall
-            if (stallTimer > 1.5f)
-            {
-                EnterStall();
-            }
-        }
-        else
-        {
-            stallTimer = Mathf.Max(0, stallTimer - Time.deltaTime * 2);
+            EnterFreefall();
         }
     }
 
-    private void ManageStallWarningEffects()
+    private void ManageAltitudeWarningEffects()
     {
-        // Handle stall warning effects
-        if (stallWarningLevel > 0.3f && !isStalling)
+        // Handle altitude warning effects
+        if (altitudeWarningLevel > 0.3f && !isFreefalling)
         {
             // Visual effect intensity
-            if (stallWarningEffect != null && !stallWarningEffect.isPlaying)
+            if (altitudeWarningEffect != null && !altitudeWarningEffect.isPlaying)
             {
-                stallWarningEffect.Play();
+                altitudeWarningEffect.Play();
             }
 
             // Sound effect intensity
-            if (stallWarningSound != null)
+            if (altitudeWarningSound != null)
             {
-                if (!stallWarningSound.isPlaying)
-                    stallWarningSound.Play();
+                if (!altitudeWarningSound.isPlaying)
+                    altitudeWarningSound.Play();
 
-                stallWarningSound.volume = stallWarningLevel;
-                stallWarningSound.pitch = 0.8f + stallWarningLevel * 0.4f;
+                altitudeWarningSound.volume = altitudeWarningLevel;
+                altitudeWarningSound.pitch = 0.8f + altitudeWarningLevel * 0.4f;
             }
         }
         else
         {
-            if (stallWarningEffect != null && stallWarningEffect.isPlaying && !isStalling)
+            if (altitudeWarningEffect != null && altitudeWarningEffect.isPlaying && !isFreefalling)
             {
-                stallWarningEffect.Stop();
+                altitudeWarningEffect.Stop();
             }
 
-            if (stallWarningSound != null && stallWarningSound.isPlaying && !isStalling)
+            if (altitudeWarningSound != null && altitudeWarningSound.isPlaying && !isFreefalling)
             {
-                stallWarningSound.Stop();
+                altitudeWarningSound.Stop();
             }
         }
     }
 
-    private void EnterStall()
+    private void EnterFreefall()
     {
-        isStalling = true;
-        stallRecoveryCounter = 0;
+        isFreefalling = true;
+        freefallTimer = 0;
 
-        // Store the random rotation to apply during stall
-        stallRotation = new Vector3(
-            Random.Range(15f, 30f),  // Pitch down (positive in Unity)
-            Random.Range(-15f, 15f),   // Random yaw
-            Random.Range(-180f, 180f)  // Random roll
+        // Reduce control effectiveness to zero
+        controlReductionFactor = 0f;
+
+        Debug.Log("MAX ALTITUDE REACHED! ENTERING FREEFALL.");
+    }
+
+    private void HandleFreefallState()
+    {
+        // Increase timer
+        freefallTimer += Time.deltaTime;
+
+        // Apply nose-down rotation
+        Vector3 freefallRotation = new Vector3(
+            freefallRotationSpeed,  // Pitch down (positive in Unity)
+            0f,                     // No yaw change
+            0f                      // No roll change
         );
+        transform.Rotate(freefallRotation * Time.deltaTime, Space.Self);
 
-        // Drastically reduce speed
-        targetSpeed *= stallSpeedPenalty;
+        // Apply gravity more strongly during freefall
+        rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, Vector3.down * planeStats.airBoostSpeed * 0.7f,
+                                     Time.deltaTime * 2.0f);
 
-        // Reduce control effectiveness
-        controlReductionFactor = 0.2f;
-
-        Debug.Log("STALL! NOSE DOWN TO RECOVER.");
-    }
-
-    private void HandleStallingState()
-    {
-        // Apply stall rotation (nose drops, random roll)
-        transform.Rotate(stallRotation * Time.deltaTime * 0.5f, Space.Self);
-
-        // Gradually increase control as recovery progresses
-        stallRecoveryCounter += Time.deltaTime;
-
-        // Check if we're recovering (pointing nose down)
-        bool isRecovering = currentPitchAngle > 0 && rb.linearVelocity.magnitude > planeStats.airNormalSpeed * 0.6f;
-
-        if (isRecovering)
+        // Check if freefall duration is complete
+        if (freefallTimer >= freefallDuration)
         {
-            // Improve control gradually
-            controlReductionFactor = Mathf.Lerp(0.2f, 1.0f, stallRecoveryCounter / stallRecoveryTime);
-
-            // If we've recovered long enough, exit stall
-            if (stallRecoveryCounter >= stallRecoveryTime)
-            {
-                ExitStall();
-            }
-        }
-        else
-        {
-            // Reset recovery counter if not actively recovering
-            stallRecoveryCounter = Mathf.Max(0, stallRecoveryCounter - Time.deltaTime * 0.5f);
-
-            // Keep controls limited
-            controlReductionFactor = 0.2f;
+            ExitFreefall();
         }
     }
 
-    private void ExitStall()
+    private void ExitFreefall()
     {
-        isStalling = false;
-        stallTimer = 0;
+        isFreefalling = false;
         controlReductionFactor = 1.0f;
 
-        // Set a recovery period where controls gradually return to full
-        StartCoroutine(StallRecoveryPeriod());
+        // Set a recovery period where controls gradually return
+        StartCoroutine(FreefallRecoveryPeriod());
 
-        Debug.Log("Stall recovered!");
+        Debug.Log("Regained control after freefall!");
     }
 
-    private IEnumerator StallRecoveryPeriod()
+    private IEnumerator FreefallRecoveryPeriod()
     {
         float recoveryTime = 2.0f;
         float timer = 0;
@@ -439,12 +407,12 @@ public class PlaneController : MonoBehaviour
         while (timer < recoveryTime)
         {
             timer += Time.deltaTime;
-            controlReductionFactor = Mathf.Lerp(0.5f, 1.0f, timer / recoveryTime);
+            controlReductionFactor = Mathf.Lerp(0.2f, 1.0f, timer / recoveryTime);
             yield return null;
         }
 
         controlReductionFactor = 1.0f;
-        stallRecoveryCounter = 0;
+        freefallTimer = 0;
     }
 
     private IEnumerator ResetFreeLookCameraAfterBlend()
@@ -526,20 +494,20 @@ public class PlaneController : MonoBehaviour
             ApplyRotation();
         }
 
-        // Apply gravity - stronger when stalling
-        Vector3 gravityVector = Vector3.down * gravitationalForce * (isStalling ? 2.0f : 1.0f);
+        // Apply gravity - stronger when freefalling
+        Vector3 gravityVector = Vector3.down * gravitationalForce * (isFreefalling ? 2.0f : 1.0f);
 
         // Calculate basic forward velocity
         Vector3 forwardVelocity = transform.forward * currentSpeed;
 
         // Blend in gravity influence based on pitch
-        if (!isStalling)
+        if (!isFreefalling)
         {
             forwardVelocity += gravityVector * Time.deltaTime * 3.0f;
         }
         else
         {
-            // When stalling, gravity takes over more dramatically
+            // When freefalling, gravity takes over more dramatically
             forwardVelocity = Vector3.Lerp(forwardVelocity, gravityVector.normalized * currentSpeed * 0.7f,
                                            Time.deltaTime * 2.0f);
         }
@@ -550,8 +518,8 @@ public class PlaneController : MonoBehaviour
 
     private void ApplyPitchBasedSpeedModifications(ref float baseSpeed)
     {
-        // Don't modify speed if stalling (handled separately)
-        if (isStalling)
+        // Don't modify speed if freefalling (handled separately)
+        if (isFreefalling)
             return;
 
         // In Unity's coordinate system:
@@ -582,6 +550,7 @@ public class PlaneController : MonoBehaviour
 
     private void ApplyRotation()
     {
+        if (isFreefalling) return;
         // Calculate target velocities based on inputs
         float targetRollVelocity = rollInput * planeStats.rollSpeed * 100f;
         float targetPitchVelocity = pitchInput * planeStats.pitchSpeed * 100f;
@@ -709,46 +678,47 @@ public class PlaneController : MonoBehaviour
         // Basic flight info
         GUI.color = normalTextColor;
         GUI.Label(new Rect(10, 10, 300, 20), $"Speed: {currentSpeed:F1} / {targetSpeed:F1}", labelStyle);
-        GUI.Label(new Rect(10, 30, 300, 20), $"Pitch Angle: {currentPitchAngle:F1}�", labelStyle);
+        GUI.Label(new Rect(10, 30, 300, 20), $"Pitch Angle: {currentPitchAngle:F1}°", labelStyle);
+        GUI.Label(new Rect(10, 50, 300, 20), $"Altitude: {currentAltitude:F1}", labelStyle);
 
         // Pitch indicators
         if (isPitchingUp)
         {
             GUI.color = pitchUpColor;
-            GUI.Label(new Rect(10, 50, 300, 20), "? PITCHING UP", labelStyle);
+            GUI.Label(new Rect(10, 70, 300, 20), "↑ PITCHING UP", labelStyle);
         }
         else if (isPitchingDown)
         {
             GUI.color = pitchDownColor;
-            GUI.Label(new Rect(10, 50, 300, 20), "? PITCHING DOWN", labelStyle);
+            GUI.Label(new Rect(10, 70, 300, 20), "↓ PITCHING DOWN", labelStyle);
         }
 
         // Speed change indicators
         if (isSpeedIncreasing)
         {
             GUI.color = speedIncreasingColor;
-            GUI.Label(new Rect(10, 70, 300, 20), "? SPEED INCREASING", labelStyle);
+            GUI.Label(new Rect(10, 90, 300, 20), "↑ SPEED INCREASING", labelStyle);
         }
         else if (isSpeedDecreasing)
         {
             GUI.color = speedDecreasingColor;
-            GUI.Label(new Rect(10, 70, 300, 20), "? SPEED DECREASING", labelStyle);
+            GUI.Label(new Rect(10, 90, 300, 20), "↓ SPEED DECREASING", labelStyle);
         }
 
         // Health indicator
         GUI.color = Color.Lerp(Color.red, Color.green, currentHealth / planeStats.maxHealth);
-        GUI.Label(new Rect(10, 90, 300, 20), $"Health: {currentHealth:F0}/{planeStats.maxHealth}", labelStyle);
+        GUI.Label(new Rect(10, 110, 300, 20), $"Health: {currentHealth:F0}/{planeStats.maxHealth}", labelStyle);
 
-        // Show stall indicators
-        if (isStalling)
+        // Show altitude warning indicators
+        if (isFreefalling)
         {
             GUI.color = Color.red;
-            GUI.Label(new Rect(Screen.width / 2 - 150, Screen.height / 2 - 25, 300, 50), "STALL! NOSE DOWN TO RECOVER", warningStyle);
+            GUI.Label(new Rect(Screen.width / 2 - 150, Screen.height / 2 - 25, 300, 50), "MAX ALTITUDE! WAIT FOR CONTROL", warningStyle);
         }
-        else if (stallWarningLevel > 0.3f)
+        else if (altitudeWarningLevel > 0.3f)
         {
             GUI.color = Color.yellow;
-            GUI.Label(new Rect(Screen.width / 2 - 100, Screen.height / 2 - 25, 200, 50), "STALL WARNING", warningStyle);
+            GUI.Label(new Rect(Screen.width / 2 - 100, Screen.height / 2 - 25, 200, 50), "ALTITUDE WARNING", warningStyle);
         }
 
         // Reset color
