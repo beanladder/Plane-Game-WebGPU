@@ -25,6 +25,24 @@ public class PlaneStats : ScriptableObject
     public float pitchSpeed = 2f;
     public float yawSpeed = 1f;
 
+    [Header("Flight Physics")]
+    [Tooltip("How much pitch angle affects forward speed")]
+    public float pitchSpeedInfluence = 0.3f;
+    [Tooltip("Speed bonus when diving (nose down)")]
+    public float diveSpeedBoost = 0.4f;
+    [Tooltip("Speed penalty when climbing (nose up)")]
+    public float climbSpeedPenalty = 0.5f;
+    [Tooltip("Pitch angle that triggers stall warnings")]
+    public float stallWarningAngle = 30f;
+    [Tooltip("Pitch angle that may cause stalling")]
+    public float stallAngleThreshold = 40f;
+    [Tooltip("How much airspeed is lost during a stall")]
+    public float stallSpeedPenalty = 0.6f;
+    [Tooltip("Time needed to fully recover from a stall")]
+    public float stallRecoveryTime = 3f;
+    [Tooltip("Strength of gravity's influence")]
+    public float gravityInfluence = 9.8f;
+
     [Header("Inertia Settings")]
     public float rotationalDamping = 0.97f;
     public float rollDamping = 0.98f;
@@ -49,4 +67,10 @@ public class PlaneStats : ScriptableObject
     public float defaultFov = 50f;
     public float maxFov = 60f;
     public float fovSmoothSpeed = 2f;
+
+    [Header("Audio & Visual Effects")]
+    public AudioClip stallWarningSound;
+    public AudioClip windRushSound;
+    public AudioClip engineSputterSound;
+    public GameObject stallSmokePrefab;
 }

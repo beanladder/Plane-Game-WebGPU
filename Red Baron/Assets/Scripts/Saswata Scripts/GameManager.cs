@@ -20,11 +20,7 @@ public class GameManager : MonoBehaviour
     private string selectedWeaponName;
     private GunData selectedGunData;
 
-    void Start()
-    {
-        if (mapCamera != null)
-            mapCamera.gameObject.SetActive(false);
-    }
+    
 
     public void SpawnPlane(int planeIndex, string weaponName)
     {
@@ -40,6 +36,8 @@ public class GameManager : MonoBehaviour
         // Instantiate new plane
         selectedPlane = Instantiate(planePrefabs[planeIndex], spawnPoint.position, spawnPoint.rotation);
         Debug.Log($"Spawned {selectedPlane.name}");
+        if (mapCamera != null)
+            mapCamera.gameObject.SetActive(false);
 
         // Extract weapons and firepoints
         ExtractWeaponsAndFirePoints(selectedPlane);
