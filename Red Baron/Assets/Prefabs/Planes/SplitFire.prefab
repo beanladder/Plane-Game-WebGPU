@@ -601,6 +601,7 @@ GameObject:
   - component: {fileID: -4524582034204000687}
   - component: {fileID: 6377420842793545612}
   - component: {fileID: 6585076283164427225}
+  - component: {fileID: -6119068627849169088}
   m_Layer: 0
   m_Name: SplitFire
   m_TagString: Untagged
@@ -776,11 +777,10 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  normalTextColor: {r: 1, g: 1, b: 1, a: 1}
-  pitchUpColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  pitchDownColor: {r: 0, g: 1, b: 1, a: 1}
-  speedIncreasingColor: {r: 0, g: 1, b: 0, a: 1}
-  speedDecreasingColor: {r: 1, g: 0, b: 0, a: 1}
+  pitchSpeedInfluence: 0.3
+  diveSpeedBoost: 0.4
+  climbSpeedPenalty: 0.5
+  gravitationalForce: 9.8
   currentSpeed: 0
   previousSpeed: 0
   targetSpeed: 0
@@ -788,10 +788,7 @@ MonoBehaviour:
   currentHealth: 0
   currentPitchAngle: 0
   previousPitchAngle: 0
-  isPitchingUp: 0
-  isPitchingDown: 0
-  isSpeedIncreasing: 0
-  isSpeedDecreasing: 0
+  currentAltitude: 0
 --- !u!114 &-4524582034204000687
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -941,6 +938,18 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &-6119068627849169088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749110562298686092}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c2920755ce55e34fa122265bc7b3e7b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2163137148580700780
 GameObject:
   m_ObjectHideFlags: 0

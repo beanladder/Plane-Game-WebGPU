@@ -28,6 +28,10 @@ MonoBehaviour:
   rollSpeed: 24
   pitchSpeed: 0.19
   yawSpeed: 0.095
+  pitchSpeedInfluence: 0.3
+  diveSpeedBoost: 0.4
+  climbSpeedPenalty: 0.01
+  gravitationalForce: 9.8
   rotationalDamping: 0.96
   rollDamping: 0.97
   pitchSensitivityMultiplier: 0.95
@@ -37,9 +41,19 @@ MonoBehaviour:
   exponentialPitchFactor: 1.5
   progressiveRollThreshold: 0.3
   progressiveRollMultiplier: 1.5
+  maxPitchAngle: 80
+  highAltitudePitchUpMultiplier: 0.2
+  highAltitudePitchDownMultiplier: 0.5
   inputSmoothTime: 0.26
   keyboardSmoothTime: 0.98
   lockCameraToHorizon: 1
   defaultFov: 50
   maxFov: 58
   fovSmoothSpeed: 1.9
+  cameraBlendTime: 1.2
+  highAltitudeFOV: 30
+  maxAltitude: 700
+  altitudeWarningThreshold: 480
+  maxAltitudePitchReduction: 0.3
+  windRushSound: {fileID: 0}
+  engineSputterSound: {fileID: 0}
