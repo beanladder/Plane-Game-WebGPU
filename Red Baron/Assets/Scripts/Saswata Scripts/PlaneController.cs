@@ -25,6 +25,11 @@ public class PlaneController : MonoBehaviour
     [SerializeField] private float gravitationalForce = 9.8f;
     [SerializeField] private float extremeClimbAngle = 45f;
 
+    [Header("Auto-Pitch Settings")]
+    [SerializeField] private float autoPitchFadeOutTime = 0.5f;
+    private float currentAutoPitchForce = 1f;
+    private float autoPitchFadeOutVelocity;
+
     // Public state variables
     public float currentSpeed = 0f;
     public float previousSpeed = 0f;
@@ -117,10 +122,8 @@ public class PlaneController : MonoBehaviour
         previousPitchAngle = currentPitchAngle;
         currentAltitude = transform.position.y;
 
-        // Handle auto-pitch timer
         UpdateAutoPitchTimer();
 
-        // Camera switching
         if (Input.GetMouseButton(2))
         {
             freeLookCam.Priority = freeLookCamPriority;
@@ -138,13 +141,11 @@ public class PlaneController : MonoBehaviour
             isFreeLookActive = false;
         }
 
-        // Throttle control - W key only
         if (Input.GetKey(KeyCode.W))
             throttleValue = Mathf.Min(throttleValue + Time.deltaTime, 1.0f);
         else
             throttleValue = Mathf.Max(throttleValue - Time.deltaTime * 2f, 0.0f);
 
-        // Input handling
         float inversePitchFactor = planeStats.invertPitchAxis ? 1f : -1f;
         float inverseRollFactor = planeStats.invertRollAxis ? 1f : -1f;
 
@@ -152,7 +153,6 @@ public class PlaneController : MonoBehaviour
         float rawRollInput = Input.GetAxis("Mouse X") * planeStats.mouseSensitivity * inverseRollFactor;
 
         targetPitchInput = ApplyPitchSensitivityScheme(rawPitchInput);
-
         targetRollInput = ApplyRollSensitivityScheme(rawRollInput);
 
         if (Input.GetKey(KeyCode.A))
@@ -187,17 +187,31 @@ public class PlaneController : MonoBehaviour
 
     private void UpdateAutoPitchTimer()
     {
-        if (currentSpeed <= 1.5f && Mathf.Abs(targetPitchInput) < 0.01f) // Only count if no pitch input
+        if (currentSpeed <= 1.5f)
         {
-            zeroSpeedTimer += Time.deltaTime;
-            if (zeroSpeedTimer >= AutoPitchDuration && !isAutoPitching)
+            if (Mathf.Abs(targetPitchInput) < 0.1f)
             {
-                isAutoPitching = true;
+                zeroSpeedTimer += Time.deltaTime;
+                if (zeroSpeedTimer >= AutoPitchDuration && !isAutoPitching)
+                {
+                    isAutoPitching = true;
+                    currentAutoPitchForce = 1f;
+                }
             }
         }
         else
         {
             zeroSpeedTimer = 0f;
+        }
+
+        if (isAutoPitching && Mathf.Abs(targetPitchInput) > 0.05f)
+        {
+            currentAutoPitchForce = Mathf.SmoothDamp(currentAutoPitchForce, 0f, ref autoPitchFadeOutVelocity, autoPitchFadeOutTime);
+            if (currentAutoPitchForce < 0.01f)
+            {
+                isAutoPitching = false;
+                zeroSpeedTimer = 0f;
+            }
         }
     }
 
@@ -208,14 +222,12 @@ public class PlaneController : MonoBehaviour
         float targetFOV;
         float transitionSpeed = planeStats.fovSmoothSpeed;
 
-        // Slow speed regime (<15)
         if (currentSpeed < 15f)
         {
             float slowFactor = 1f - Mathf.InverseLerp(0f, 15f, currentSpeed);
             targetFOV = Mathf.Lerp(planeStats.defaultFov, 30f, slowFactor);
-            transitionSpeed *= 1.5f; // Faster transition when slowing
+            transitionSpeed *= 1.5f;
         }
-        // Boosted speed regime (>normal speed)
         else if (currentSpeed > planeStats.airNormalSpeed)
         {
             float speedFactor = Mathf.InverseLerp(
@@ -226,7 +238,6 @@ public class PlaneController : MonoBehaviour
             float curveFactor = fovTransitionCurve.Evaluate(speedFactor);
             targetFOV = Mathf.Lerp(planeStats.defaultFov, planeStats.maxFov, curveFactor);
         }
-        // Normal speed regime
         else
         {
             targetFOV = planeStats.defaultFov;
@@ -283,34 +294,29 @@ public class PlaneController : MonoBehaviour
     {
         float pitchInfluence = Mathf.Sin(-currentPitchAngle * Mathf.Deg2Rad);
 
-        // Diving (nose down) - speed increases
         if (pitchInfluence < 0)
         {
             float diveBoostFactor = Mathf.Abs(pitchInfluence) * diveSpeedBoost * 2.0f;
             baseSpeed += baseSpeed * diveBoostFactor;
         }
-        // Climbing (nose up) - speed decreases
         else if (pitchInfluence > 0)
         {
             float climbSteepness = pitchInfluence;
             float climbPenaltyFactor = climbSteepness * climbSpeedPenalty * 1.5f;
             baseSpeed -= baseSpeed * climbPenaltyFactor;
 
-            // Extreme climb penalty
-            if (climbSteepness > 0.7f) // ~45 degrees
+            if (climbSteepness > 0.7f)
             {
                 float extremeClimbFactor = Mathf.InverseLerp(0.7f, 1.0f, climbSteepness);
                 baseSpeed *= (1.0f - extremeClimbFactor);
             }
 
-            // Minimum speed cap
             if (baseSpeed < 0.1f)
             {
                 baseSpeed = 0f;
             }
         }
 
-        // Additional general pitch influence
         baseSpeed += baseSpeed * -pitchInfluence * pitchSpeedInfluence;
     }
 
@@ -318,17 +324,11 @@ public class PlaneController : MonoBehaviour
     {
         if (isAutoPitching)
         {
-            // Check if user is providing pitch input
-            if (Mathf.Abs(targetPitchInput) > 0.01f)
+            HandleAutoPitchRotation();
+            HandleRollAndYaw();
+
+            if (currentAutoPitchForce < 1f)
             {
-                isAutoPitching = false;
-                zeroSpeedTimer = 0f;
-                HandleAllRotations();
-            }
-            else
-            {
-                HandleAutoPitchRotation();
-                HandleRollAndYaw();
                 HandleAllRotations();
             }
         }
@@ -341,11 +341,11 @@ public class PlaneController : MonoBehaviour
     private void HandleAutoPitchRotation()
     {
         float currentPitch = NormalizePitchAngle(transform.eulerAngles.x);
-        float newPitch = Mathf.MoveTowards(currentPitch, TargetAutoPitchAngle, AutoPitchSpeed * Time.deltaTime);
+        float effectiveAutoPitchSpeed = AutoPitchSpeed * currentAutoPitchForce;
+        float newPitch = Mathf.MoveTowards(currentPitch, TargetAutoPitchAngle, effectiveAutoPitchSpeed * Time.deltaTime);
         float pitchDelta = newPitch - currentPitch;
         transform.Rotate(Vector3.right * pitchDelta, Space.Self);
 
-        // Check if target reached
         if (Mathf.Abs(newPitch - TargetAutoPitchAngle) < 0.1f)
         {
             isAutoPitching = false;
@@ -362,7 +362,6 @@ public class PlaneController : MonoBehaviour
         targetRollVelocity *= speedFactor;
         targetYawVelocity *= speedFactor;
 
-        // Roll velocity smoothing
         if (Mathf.Abs(rollInput) > 0.01f)
         {
             rollVelocity = Mathf.Lerp(rollVelocity, targetRollVelocity, Time.deltaTime * 5f);
@@ -372,7 +371,6 @@ public class PlaneController : MonoBehaviour
             rollVelocity *= planeStats.rollDamping;
         }
 
-        // Yaw velocity smoothing
         if (Mathf.Abs(yawInput) > 0.01f)
         {
             yawVelocity = Mathf.Lerp(yawVelocity, targetYawVelocity, Time.deltaTime * 5f);
