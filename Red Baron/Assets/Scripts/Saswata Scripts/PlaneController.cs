@@ -30,7 +30,6 @@ public class PlaneController : MonoBehaviour
     private float currentAutoPitchForce = 1f;
     private float autoPitchFadeOutVelocity;
 
-    // Public state variables
     public float currentSpeed = 0f;
     public float previousSpeed = 0f;
     public float targetSpeed = 0f;
@@ -39,13 +38,11 @@ public class PlaneController : MonoBehaviour
     public float previousPitchAngle = 0f;
     public float currentAltitude = 0f;
 
-    // Private state variables
     private float rollInput = 0f;
     private float yawInput = 0f;
     private float pitchInput = 0f;
     private float throttleValue = 0f;
 
-    // Smoothing variables
     private float smoothPitchVelocity;
     private float smoothRollVelocity;
     private float smoothYawVelocity;
@@ -53,22 +50,21 @@ public class PlaneController : MonoBehaviour
     private float targetRollInput = 0f;
     private float targetYawInput = 0f;
 
-    // Inertia and momentum variables
     private float rollVelocity = 0f;
     private float pitchVelocity = 0f;
     private float yawVelocity = 0f;
     private float speedSmoothVelocity;
 
-    // Camera references
     private Camera mainCamera;
     private Transform cameraTransform;
 
-    // Auto-pitch variables
     private float zeroSpeedTimer = 0f;
     private bool isAutoPitching = false;
     private const float AutoPitchDuration = 2.5f;
     private const float AutoPitchSpeed = 30f;
     private const float TargetAutoPitchAngle = 90f;
+
+    private float lastAltitude;
 
     private void Start()
     {
@@ -114,6 +110,7 @@ public class PlaneController : MonoBehaviour
 
         currentPitchAngle = NormalizePitchAngle(transform.eulerAngles.x);
         previousPitchAngle = currentPitchAngle;
+        lastAltitude = transform.position.y;
     }
 
     private void Update()
@@ -284,7 +281,18 @@ public class PlaneController : MonoBehaviour
             ApplyRotation();
         }
 
-        Vector3 gravityVector = Vector3.down * gravitationalForce;
+        Vector3 gravityVector = Vector3.down * planeStats.gravitationalForce;
+
+        if (currentAltitude > planeStats.maxAltitude - planeStats.altitudeLimitSoftness)
+        {
+            float exceedFactor = Mathf.InverseLerp(
+                planeStats.maxAltitude - planeStats.altitudeLimitSoftness,
+                planeStats.maxAltitude,
+                currentAltitude
+            );
+            gravityVector += Vector3.down * exceedFactor * planeStats.altitudeLimitForce;
+        }
+
         Vector3 forwardVelocity = transform.forward * currentSpeed;
         forwardVelocity += gravityVector * Time.deltaTime * 3.0f;
         rb.linearVelocity = forwardVelocity;
@@ -296,13 +304,13 @@ public class PlaneController : MonoBehaviour
 
         if (pitchInfluence < 0)
         {
-            float diveBoostFactor = Mathf.Abs(pitchInfluence) * diveSpeedBoost * 2.0f;
+            float diveBoostFactor = Mathf.Abs(pitchInfluence) * planeStats.diveSpeedBoost * 2.0f;
             baseSpeed += baseSpeed * diveBoostFactor;
         }
         else if (pitchInfluence > 0)
         {
             float climbSteepness = pitchInfluence;
-            float climbPenaltyFactor = climbSteepness * climbSpeedPenalty * 1.5f;
+            float climbPenaltyFactor = climbSteepness * planeStats.climbSpeedPenalty * 1.5f;
             baseSpeed -= baseSpeed * climbPenaltyFactor;
 
             if (climbSteepness > 0.7f)
@@ -317,7 +325,7 @@ public class PlaneController : MonoBehaviour
             }
         }
 
-        baseSpeed += baseSpeed * -pitchInfluence * pitchSpeedInfluence;
+        baseSpeed += baseSpeed * -pitchInfluence * planeStats.pitchSpeedInfluence;
     }
 
     private void ApplyRotation()

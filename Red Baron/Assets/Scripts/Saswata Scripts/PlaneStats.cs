@@ -26,13 +26,9 @@ public class PlaneStats : ScriptableObject
     public float yawSpeed = 1f;
 
     [Header("Flight Physics")]
-    [Tooltip("How much pitch angle affects forward speed")]
     public float pitchSpeedInfluence = 0.3f;
-    [Tooltip("Speed bonus when diving (nose down)")]
     public float diveSpeedBoost = 0.4f;
-    [Tooltip("Speed penalty when climbing (nose up)")]
     public float climbSpeedPenalty = 0.5f;
-    [Tooltip("Strength of gravity's influence")]
     public float gravitationalForce = 9.8f;
 
     [Header("Inertia Settings")]
@@ -64,4 +60,9 @@ public class PlaneStats : ScriptableObject
     [Header("Audio & Visual Effects")]
     public AudioClip windRushSound;
     public AudioClip engineSputterSound;
+
+    [Header("Altitude Limits")]
+    public float maxAltitude = 1000f;
+    public float altitudeLimitSoftness = 50f;
+    public float altitudeLimitForce = 5f;
 }
