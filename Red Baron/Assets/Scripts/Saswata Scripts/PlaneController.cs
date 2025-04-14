@@ -13,8 +13,8 @@ public class PlaneController : MonoBehaviour
     [SerializeField] private CinemachineCamera freeLookCam;
     [SerializeField] private int defaultCamPriority = 10;
     [SerializeField] private int freeLookCamPriority = 20;
-    public bool isFreeLookActive = false;
     [SerializeField] private AnimationCurve fovTransitionCurve = AnimationCurve.Linear(0, 0, 1, 1);
+    public bool isFreeLookActive = false;
     private float initialHorizontalAxisValue;
     private float initialVerticalAxisValue;
 
@@ -23,20 +23,13 @@ public class PlaneController : MonoBehaviour
     [SerializeField] private float diveSpeedBoost = 0.4f;
     [SerializeField] private float climbSpeedPenalty = 0.5f;
     [SerializeField] private float gravitationalForce = 9.8f;
-
-    // Loop Prevention Variables
-    [Header("Loop Prevention")]
-    [SerializeField] private float loopPreventionStrength = 5f;
-    [SerializeField] private float loopInputThreshold = 0.6f;
-    [SerializeField] private float maxPitchVelocityLooping = 30f; // Maximum pitch velocity during loop attempts
-    [SerializeField] private float recoveryBoostMultiplier = 2.5f; // Boost factor for recovery from extreme angles
+    [SerializeField] private float extremeClimbAngle = 45f;
 
     // Public state variables
     public float currentSpeed = 0f;
     public float previousSpeed = 0f;
     public float targetSpeed = 0f;
     public Vector3 currentRotation;
-    public float currentHealth;
     public float currentPitchAngle = 0f;
     public float previousPitchAngle = 0f;
     public float currentAltitude = 0f;
@@ -65,32 +58,12 @@ public class PlaneController : MonoBehaviour
     private Camera mainCamera;
     private Transform cameraTransform;
 
-    // Repair variables
-    private bool isRepairing = false;
-    private float repairTimer = 0f;
-
-    // Altitude control variables
-    private float basePitchSensitivity;
-    private float currentPitchSensitivityMultiplier = 1f;
-    private float altitudeLimitFactor = 0f;
-
-    // Variables for max altitude behavior
-    private bool isAtMaxAltitude = false;
-    private bool isForcedPitchActive = false;
-    private float forcedPitchProgress = 0f;
-    private const float FORCED_PITCH_DURATION = 4f;
-    private float lastPitchInputTime;
-    private float lastPitchInputMagnitude;
-    private float forcedDescentStartTime = 0f;
-    private float forcedDescentRecoveryBlend = 0f;
-
-    // Loop detection and prevention
-    private float continuousPitchInputTime = 0f;
-    private float pitchInputDirection = 0f;
-    private float lastRawPitchInput = 0f;
-    private float pitchAngleAccumulator = 0f;
-    private bool isInLoopingMotion = false;
-    private float loopingPhase = 0f; // 0 to 1 representing how far through a loop we are
+    // Auto-pitch variables
+    private float zeroSpeedTimer = 0f;
+    private bool isAutoPitching = false;
+    private const float AutoPitchDuration = 2.5f;
+    private const float AutoPitchSpeed = 30f;
+    private const float TargetAutoPitchAngle = 90f;
 
     private void Start()
     {
@@ -99,8 +72,6 @@ public class PlaneController : MonoBehaviour
             Debug.LogError("PlaneStats not assigned to PlaneController!");
             return;
         }
-
-        currentHealth = planeStats.maxHealth;
 
         if (cam != null)
         {
@@ -118,15 +89,13 @@ public class PlaneController : MonoBehaviour
         currentSpeed = planeStats.airNormalSpeed;
         previousSpeed = currentSpeed;
         targetSpeed = planeStats.airNormalSpeed;
-        throttleValue = 0.5f;
+        throttleValue = 0f;
 
         mainCamera = Camera.main;
         if (mainCamera != null)
         {
             cameraTransform = mainCamera.transform;
         }
-
-        basePitchSensitivity = planeStats.pitchSensitivityMultiplier;
 
         if (freeLookCam != null)
         {
@@ -144,33 +113,14 @@ public class PlaneController : MonoBehaviour
 
     private void Update()
     {
-        if (isRepairing)
-        {
-            HandleRepair();
-            return;
-        }
-
-        // Check max altitude status
-        if (currentAltitude >= planeStats.maxAltitude && !isAtMaxAltitude)
-        {
-            isAtMaxAltitude = true;
-            StartCoroutine(ForcedPitchSequence());
-        }
-        else if (currentAltitude < planeStats.maxAltitude * 0.9f)
-        {
-            isAtMaxAltitude = false;
-        }
-
         previousSpeed = currentSpeed;
         previousPitchAngle = currentPitchAngle;
         currentAltitude = transform.position.y;
 
-        if (Input.GetKeyDown(KeyCode.R) && currentHealth < planeStats.maxHealth)
-        {
-            StartRepair();
-            return;
-        }
+        // Handle auto-pitch timer
+        UpdateAutoPitchTimer();
 
+        // Camera switching
         if (Input.GetMouseButton(2))
         {
             freeLookCam.Priority = freeLookCamPriority;
@@ -188,29 +138,21 @@ public class PlaneController : MonoBehaviour
             isFreeLookActive = false;
         }
 
+        // Throttle control - W key only
         if (Input.GetKey(KeyCode.W))
             throttleValue = Mathf.Min(throttleValue + Time.deltaTime, 1.0f);
-        else if (Input.GetKey(KeyCode.S))
-            throttleValue = Mathf.Max(throttleValue - Time.deltaTime * 0.5f, 0.0f);
+        else
+            throttleValue = Mathf.Max(throttleValue - Time.deltaTime * 2f, 0.0f);
 
+        // Input handling
         float inversePitchFactor = planeStats.invertPitchAxis ? 1f : -1f;
         float inverseRollFactor = planeStats.invertRollAxis ? 1f : -1f;
 
         float rawPitchInput = Input.GetAxis("Mouse Y") * planeStats.mouseSensitivity * inversePitchFactor;
         float rawRollInput = Input.GetAxis("Mouse X") * planeStats.mouseSensitivity * inverseRollFactor;
 
-        // Track pitch input timing and magnitude
-        if (Mathf.Abs(rawPitchInput) > 0.01f)
-        {
-            lastPitchInputTime = Time.time;
-            lastPitchInputMagnitude = Mathf.Abs(rawPitchInput);
-        }
+        targetPitchInput = ApplyPitchSensitivityScheme(rawPitchInput);
 
-        // Handle looping detection and prevention
-        ProcessLoopingDetection(rawPitchInput);
-
-        // Apply loop prevention or recovery boost based on current state
-        targetPitchInput = ApplyPitchControlScheme(rawPitchInput);
         targetRollInput = ApplyRollSensitivityScheme(rawRollInput);
 
         if (Input.GetKey(KeyCode.A))
@@ -224,22 +166,10 @@ public class PlaneController : MonoBehaviour
         rollInput = Mathf.SmoothDamp(rollInput, targetRollInput, ref smoothRollVelocity, planeStats.inputSmoothTime);
         yawInput = Mathf.SmoothDamp(yawInput, targetYawInput, ref smoothYawVelocity, planeStats.keyboardSmoothTime);
 
-        // Manage smooth transition after forced descent
-        if (isForcedPitchActive)
-        {
-            forcedDescentStartTime = Time.time;
-            forcedDescentRecoveryBlend = 0f;
-        }
-        else if (Time.time - forcedDescentStartTime < 2.0f)
-        {
-            // Gradually restore control after forced descent
-            forcedDescentRecoveryBlend = Mathf.Min(1f, (Time.time - forcedDescentStartTime) / 2.0f);
-            pitchInput = Mathf.Lerp(0f, pitchInput, forcedDescentRecoveryBlend);
-            rollInput = Mathf.Lerp(0f, rollInput, forcedDescentRecoveryBlend);
-        }
+        currentPitchAngle = NormalizePitchAngle(transform.eulerAngles.x);
+        float effectiveThrottle = AdjustThrottleForClimb(throttleValue);
 
-        HandleFlying(throttleValue);
-
+        HandleFlying(effectiveThrottle);
         currentRotation = transform.eulerAngles;
         currentPitchAngle = NormalizePitchAngle(transform.eulerAngles.x);
 
@@ -255,205 +185,90 @@ public class PlaneController : MonoBehaviour
         }
     }
 
-    private void ProcessLoopingDetection(float rawPitchInput)
+    private void UpdateAutoPitchTimer()
     {
-        // Detect continuous pitch input in the same direction
-        if (Mathf.Sign(rawPitchInput) == Mathf.Sign(lastRawPitchInput) && Mathf.Abs(rawPitchInput) > loopInputThreshold)
+        if (currentSpeed <= 1.5f && Mathf.Abs(targetPitchInput) < 0.01f) // Only count if no pitch input
         {
-            if (pitchInputDirection == 0 || Mathf.Sign(rawPitchInput) == pitchInputDirection)
+            zeroSpeedTimer += Time.deltaTime;
+            if (zeroSpeedTimer >= AutoPitchDuration && !isAutoPitching)
             {
-                pitchInputDirection = Mathf.Sign(rawPitchInput);
-                continuousPitchInputTime += Time.deltaTime;
-
-                // Track accumulated pitch angle change in the same direction
-                float pitchDelta = currentPitchAngle - previousPitchAngle;
-                if (Mathf.Sign(pitchDelta) == pitchInputDirection)
-                {
-                    pitchAngleAccumulator += Mathf.Abs(pitchDelta);
-                }
-
-                // Detect if we're in a looping motion (accumulating significant pitch change)
-                if (pitchAngleAccumulator > 45f && continuousPitchInputTime > 0.5f)
-                {
-                    isInLoopingMotion = true;
-                    loopingPhase = Mathf.Clamp01(pitchAngleAccumulator / 360f);
-                }
-            }
-            else
-            {
-                // Reset if direction changed
-                pitchInputDirection = Mathf.Sign(rawPitchInput);
-                continuousPitchInputTime = 0f;
-                pitchAngleAccumulator = 0f;
+                isAutoPitching = true;
             }
         }
-        else if (Mathf.Abs(rawPitchInput) < 0.2f)
+        else
         {
-            // Reset when no significant input
-            continuousPitchInputTime = Mathf.Max(0, continuousPitchInputTime - Time.deltaTime * 2);
-
-            if (continuousPitchInputTime < 0.2f)
-            {
-                pitchInputDirection = 0f;
-                isInLoopingMotion = false;
-                loopingPhase = 0f;
-                pitchAngleAccumulator = 0f;
-            }
+            zeroSpeedTimer = 0f;
         }
-
-        lastRawPitchInput = rawPitchInput;
     }
 
-    private float ApplyPitchControlScheme(float input)
+    private void UpdateCameraFOV()
     {
-        if (isForcedPitchActive) return 0f;
+        if (cam == null) return;
 
-        // Calculate angle factor (0 at level flight, 1 at 90° pitch)
-        float angleFactor = Mathf.Clamp01(Mathf.Abs(currentPitchAngle) / 90f);
+        float targetFOV;
+        float transitionSpeed = planeStats.fovSmoothSpeed;
 
-        // Calculate loop prevention strength
-        float loopPreventionFactor = 0f;
-        if (isInLoopingMotion)
+        // Slow speed regime (<15)
+        if (currentSpeed < 15f)
         {
-            // Progressively stronger prevention as you get further into the loop
-            loopPreventionFactor = Mathf.Pow(loopingPhase, 2) * loopPreventionStrength;
+            float slowFactor = 1f - Mathf.InverseLerp(0f, 15f, currentSpeed);
+            targetFOV = Mathf.Lerp(planeStats.defaultFov, 30f, slowFactor);
+            transitionSpeed *= 1.5f; // Faster transition when slowing
+        }
+        // Boosted speed regime (>normal speed)
+        else if (currentSpeed > planeStats.airNormalSpeed)
+        {
+            float speedFactor = Mathf.InverseLerp(
+                planeStats.airNormalSpeed,
+                planeStats.airBoostSpeed,
+                currentSpeed
+            );
+            float curveFactor = fovTransitionCurve.Evaluate(speedFactor);
+            targetFOV = Mathf.Lerp(planeStats.defaultFov, planeStats.maxFov, curveFactor);
+        }
+        // Normal speed regime
+        else
+        {
+            targetFOV = planeStats.defaultFov;
         }
 
-        // Recovery boost for extreme nose down angles
-        float recoveryBoost = 1f;
-        if (currentPitchAngle < -70f && input < 0f) // Trying to pull up from steep dive
-        {
-            // More negative pitch = stronger recovery boost
-            float extremeAngleFactor = Mathf.Clamp01((Mathf.Abs(currentPitchAngle) - 70f) / 20f);
-            recoveryBoost = 1f + (recoveryBoostMultiplier * extremeAngleFactor);
-        }
-
-        // Calculate altitude factor (0 below warning, 1 at max altitude)
-        float altitudeFactor = Mathf.Clamp01(
-            (currentAltitude - planeStats.altitudeWarningThreshold) /
-            (planeStats.maxAltitude - planeStats.altitudeWarningThreshold)
+        cam.Lens.FieldOfView = Mathf.Lerp(
+            cam.Lens.FieldOfView,
+            targetFOV,
+            Time.deltaTime * transitionSpeed
         );
-
-        // Base sensitivity
-        float sensitivity = planeStats.pitchSensitivityMultiplier;
-
-        // Apply angle-based adjustments (milder curve than before)
-        sensitivity *= Mathf.Lerp(1f, 0.2f, Mathf.Pow(angleFactor, 2));
-
-        // Apply altitude-based reduction
-        sensitivity *= Mathf.Lerp(1f, 0.3f, altitudeFactor);
-
-        // Apply input-based reduction for fast movements
-        if (Time.time - lastPitchInputTime < 0.2f && lastPitchInputMagnitude > 1f)
-        {
-            sensitivity *= Mathf.Lerp(1f, 0.4f, lastPitchInputMagnitude / 2f);
-        }
-
-        // Apply loop prevention by reducing effective input
-        float inputMagnitude = Mathf.Abs(input);
-        float inputSign = Mathf.Sign(input);
-
-        // Reduce input strength based on loop prevention factor if in same direction as loop
-        if (inputSign == pitchInputDirection && isInLoopingMotion)
-        {
-            inputMagnitude = Mathf.Max(0, inputMagnitude - loopPreventionFactor);
-        }
-
-        // Boost recovery from extreme angles
-        if (recoveryBoost > 1f)
-        {
-            inputMagnitude *= recoveryBoost;
-        }
-
-        // Reconstruct input with adjusted magnitude
-        float modifiedInput = inputSign * inputMagnitude * sensitivity;
-
-        // Apply exponential response if enabled
-        if (planeStats.useExponentialPitchResponse)
-        {
-            float sign = Mathf.Sign(modifiedInput);
-            float absValue = Mathf.Abs(modifiedInput);
-            modifiedInput = sign * Mathf.Pow(absValue, planeStats.exponentialPitchFactor);
-        }
-
-        // Limit maximum pitch velocity during loop attempts
-        if (isInLoopingMotion)
-        {
-            modifiedInput = Mathf.Clamp(modifiedInput, -maxPitchVelocityLooping, maxPitchVelocityLooping);
-        }
-
-        // Add general maximum limits
-        float maxPitchRate = Mathf.Lerp(80f, 30f, angleFactor);
-        return Mathf.Clamp(modifiedInput, -maxPitchRate, maxPitchRate);
     }
 
-    private IEnumerator ForcedPitchSequence()
+    private float AdjustThrottleForClimb(float rawThrottle)
     {
-        isForcedPitchActive = true;
-        float startPitch = currentPitchAngle;
-        float startRoll = transform.eulerAngles.z;
-        float elapsedTime = 0f;
+        float pitchFactor = -Mathf.Sin(currentPitchAngle * Mathf.Deg2Rad);
 
-        while (elapsedTime < FORCED_PITCH_DURATION && isAtMaxAltitude)
-        {
-            forcedPitchProgress = elapsedTime / FORCED_PITCH_DURATION;
+        if (pitchFactor <= 0)
+            return rawThrottle;
 
-            // Smooth easing curve for more natural motion
-            float easedProgress = 1f - Mathf.Pow(1f - forcedPitchProgress, 3); // Cubic ease out
+        float climbSteepness = Mathf.Clamp01(pitchFactor);
 
-            // Gradually level the roll while pitching down
-            float targetPitch = Mathf.Lerp(startPitch, 50f, easedProgress);
-            float targetRoll = Mathf.Lerp(startRoll, 0f, easedProgress * 0.7f);
+        if (climbSteepness > 0.9f)
+            return 0f;
 
-            // Create a target rotation that combines current yaw with our desired pitch and roll
-            Quaternion targetRotation = Quaternion.Euler(targetPitch, transform.eulerAngles.y, targetRoll);
+        float throttleEffectiveness = 1f - (climbSteepness * climbSteepness * 1.5f);
+        throttleEffectiveness = Mathf.Clamp01(throttleEffectiveness);
 
-            // Smoothly interpolate to the target rotation
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 1.5f);
-
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        isForcedPitchActive = false;
-        forcedDescentStartTime = Time.time; // Mark the time when forced descent ends
-    }
-
-    private float ApplyRollSensitivityScheme(float input)
-    {
-        float modifiedInput = input * planeStats.rollSensitivityMultiplier;
-
-        if (planeStats.useProgressiveRollResponse)
-        {
-            if (Mathf.Abs(modifiedInput) > planeStats.progressiveRollThreshold)
-            {
-                float exceededAmount = Mathf.Abs(modifiedInput) - planeStats.progressiveRollThreshold;
-                float extraResponse = exceededAmount * planeStats.progressiveRollMultiplier;
-                modifiedInput = Mathf.Sign(modifiedInput) * (planeStats.progressiveRollThreshold + extraResponse);
-            }
-        }
-
-        return modifiedInput;
+        return rawThrottle * throttleEffectiveness;
     }
 
     private void HandleFlying(float throttleInput)
     {
-        float baseTargetSpeed = Mathf.Lerp(planeStats.airNormalSpeed * 0.5f, planeStats.airBoostSpeed, throttleInput);
+        float baseTargetSpeed = Mathf.Lerp(planeStats.airNormalSpeed, planeStats.airBoostSpeed, throttleInput);
 
-        if (currentAltitude > planeStats.altitudeWarningThreshold)
-        {
-            float altitudePenalty = Mathf.Clamp01((currentAltitude - planeStats.altitudeWarningThreshold) /
-                               (planeStats.maxAltitude - planeStats.altitudeWarningThreshold));
-            baseTargetSpeed *= Mathf.Lerp(1f, 0.5f, altitudePenalty);
-        }
+        ApplyPitchBasedSpeedModifications(ref baseTargetSpeed, throttleInput);
 
-        ApplyPitchBasedSpeedModifications(ref baseTargetSpeed);
         targetSpeed = baseTargetSpeed;
 
         float rate = currentSpeed < targetSpeed ? planeStats.accelerationRate : planeStats.decelerationRate;
         currentSpeed = Mathf.SmoothDamp(currentSpeed, targetSpeed, ref speedSmoothVelocity, 1f / rate);
 
-        if (!isFreeLookActive && !isForcedPitchActive)
+        if (!isFreeLookActive)
         {
             ApplyRotation();
         }
@@ -464,31 +279,120 @@ public class PlaneController : MonoBehaviour
         rb.linearVelocity = forwardVelocity;
     }
 
-    private void ApplyPitchBasedSpeedModifications(ref float baseSpeed)
+    private void ApplyPitchBasedSpeedModifications(ref float baseSpeed, float throttle)
     {
         float pitchInfluence = Mathf.Sin(-currentPitchAngle * Mathf.Deg2Rad);
 
+        // Diving (nose down) - speed increases
         if (pitchInfluence < 0)
         {
-            float diveBoostFactor = Mathf.Abs(pitchInfluence) * diveSpeedBoost;
+            float diveBoostFactor = Mathf.Abs(pitchInfluence) * diveSpeedBoost * 2.0f;
             baseSpeed += baseSpeed * diveBoostFactor;
         }
+        // Climbing (nose up) - speed decreases
         else if (pitchInfluence > 0)
         {
-            float climbPenaltyFactor = pitchInfluence * climbSpeedPenalty;
+            float climbSteepness = pitchInfluence;
+            float climbPenaltyFactor = climbSteepness * climbSpeedPenalty * 1.5f;
             baseSpeed -= baseSpeed * climbPenaltyFactor;
+
+            // Extreme climb penalty
+            if (climbSteepness > 0.7f) // ~45 degrees
+            {
+                float extremeClimbFactor = Mathf.InverseLerp(0.7f, 1.0f, climbSteepness);
+                baseSpeed *= (1.0f - extremeClimbFactor);
+            }
+
+            // Minimum speed cap
+            if (baseSpeed < 0.1f)
+            {
+                baseSpeed = 0f;
+            }
         }
 
+        // Additional general pitch influence
         baseSpeed += baseSpeed * -pitchInfluence * pitchSpeedInfluence;
     }
 
     private void ApplyRotation()
     {
+        if (isAutoPitching)
+        {
+            // Check if user is providing pitch input
+            if (Mathf.Abs(targetPitchInput) > 0.01f)
+            {
+                isAutoPitching = false;
+                zeroSpeedTimer = 0f;
+                HandleAllRotations();
+            }
+            else
+            {
+                HandleAutoPitchRotation();
+                HandleRollAndYaw();
+                HandleAllRotations();
+            }
+        }
+        else
+        {
+            HandleAllRotations();
+        }
+    }
+
+    private void HandleAutoPitchRotation()
+    {
+        float currentPitch = NormalizePitchAngle(transform.eulerAngles.x);
+        float newPitch = Mathf.MoveTowards(currentPitch, TargetAutoPitchAngle, AutoPitchSpeed * Time.deltaTime);
+        float pitchDelta = newPitch - currentPitch;
+        transform.Rotate(Vector3.right * pitchDelta, Space.Self);
+
+        // Check if target reached
+        if (Mathf.Abs(newPitch - TargetAutoPitchAngle) < 0.1f)
+        {
+            isAutoPitching = false;
+            zeroSpeedTimer = 0f;
+        }
+    }
+
+    private void HandleRollAndYaw()
+    {
+        float targetRollVelocity = rollInput * planeStats.rollSpeed * 100f;
+        float targetYawVelocity = yawInput * planeStats.yawSpeed * 100f;
+
+        float speedFactor = Mathf.Max(0.2f, Mathf.Clamp01(currentSpeed / planeStats.airNormalSpeed));
+        targetRollVelocity *= speedFactor;
+        targetYawVelocity *= speedFactor;
+
+        // Roll velocity smoothing
+        if (Mathf.Abs(rollInput) > 0.01f)
+        {
+            rollVelocity = Mathf.Lerp(rollVelocity, targetRollVelocity, Time.deltaTime * 5f);
+        }
+        else
+        {
+            rollVelocity *= planeStats.rollDamping;
+        }
+
+        // Yaw velocity smoothing
+        if (Mathf.Abs(yawInput) > 0.01f)
+        {
+            yawVelocity = Mathf.Lerp(yawVelocity, targetYawVelocity, Time.deltaTime * 5f);
+        }
+        else
+        {
+            yawVelocity *= planeStats.rotationalDamping;
+        }
+
+        transform.Rotate(Vector3.up * yawVelocity * Time.deltaTime, Space.Self);
+        transform.Rotate(Vector3.forward * rollVelocity * Time.deltaTime, Space.Self);
+    }
+
+    private void HandleAllRotations()
+    {
         float targetRollVelocity = rollInput * planeStats.rollSpeed * 100f;
         float targetPitchVelocity = pitchInput * planeStats.pitchSpeed * 100f;
         float targetYawVelocity = yawInput * planeStats.yawSpeed * 100f;
 
-        float speedFactor = Mathf.Clamp01(currentSpeed / planeStats.airNormalSpeed);
+        float speedFactor = Mathf.Max(0.2f, Mathf.Clamp01(currentSpeed / planeStats.airNormalSpeed));
         targetPitchVelocity *= speedFactor;
         targetRollVelocity *= speedFactor;
         targetYawVelocity *= speedFactor;
@@ -525,22 +429,6 @@ public class PlaneController : MonoBehaviour
         transform.Rotate(Vector3.forward * rollVelocity * Time.deltaTime, Space.Self);
     }
 
-    private void UpdateCameraFOV()
-    {
-        if (cam == null) return;
-
-        float altitudeFactor = Mathf.Clamp01((currentAltitude - planeStats.altitudeWarningThreshold) /
-                         (planeStats.maxAltitude - planeStats.altitudeWarningThreshold));
-
-        float speedFactor = Mathf.InverseLerp(planeStats.airNormalSpeed, planeStats.airBoostSpeed, currentSpeed);
-        float speedBasedFOV = Mathf.Lerp(planeStats.defaultFov, planeStats.maxFov, fovTransitionCurve.Evaluate(speedFactor));
-
-        float targetFOV = Mathf.Lerp(speedBasedFOV, planeStats.highAltitudeFOV, altitudeFactor);
-
-        cam.Lens.FieldOfView = Mathf.Lerp(cam.Lens.FieldOfView, targetFOV,
-            Time.deltaTime * planeStats.fovSmoothSpeed);
-    }
-
     private float NormalizePitchAngle(float angle)
     {
         if (angle > 180)
@@ -562,32 +450,30 @@ public class PlaneController : MonoBehaviour
         }
     }
 
-    public void TakeDamage(float damageAmount)
+    private float ApplyPitchSensitivityScheme(float input)
     {
-        currentHealth = Mathf.Max(0, currentHealth - damageAmount);
-
-        if (currentHealth <= 0)
+        float modifiedInput = input * planeStats.pitchSensitivityMultiplier;
+        if (planeStats.useExponentialPitchResponse)
         {
-            Debug.Log($"{planeStats.planeName} has been destroyed!");
+            float sign = Mathf.Sign(modifiedInput);
+            float absValue = Mathf.Abs(modifiedInput);
+            modifiedInput = sign * Mathf.Pow(absValue, planeStats.exponentialPitchFactor);
         }
+        return modifiedInput;
     }
 
-    private void StartRepair()
+    private float ApplyRollSensitivityScheme(float input)
     {
-        isRepairing = true;
-        repairTimer = 0f;
-        Debug.Log($"Starting repair for {planeStats.planeName}");
-    }
-
-    private void HandleRepair()
-    {
-        repairTimer += Time.deltaTime;
-
-        if (repairTimer >= planeStats.repairTime)
+        float modifiedInput = input * planeStats.rollSensitivityMultiplier;
+        if (planeStats.useProgressiveRollResponse)
         {
-            currentHealth = Mathf.Min(planeStats.maxHealth, currentHealth + planeStats.repairAmount);
-            isRepairing = false;
-            Debug.Log($"Repair complete. Health: {currentHealth}/{planeStats.maxHealth}");
+            if (Mathf.Abs(modifiedInput) > planeStats.progressiveRollThreshold)
+            {
+                float exceededAmount = Mathf.Abs(modifiedInput) - planeStats.progressiveRollThreshold;
+                float extraResponse = exceededAmount * planeStats.progressiveRollMultiplier;
+                modifiedInput = Mathf.Sign(modifiedInput) * (planeStats.progressiveRollThreshold + extraResponse);
+            }
         }
+        return modifiedInput;
     }
 }

@@ -602,6 +602,8 @@ GameObject:
   - component: {fileID: 6377420842793545612}
   - component: {fileID: 6585076283164427225}
   - component: {fileID: -6119068627849169088}
+  - component: {fileID: 4040129616311519669}
+  - component: {fileID: 6983208568921878108}
   m_Layer: 0
   m_Name: SplitFire
   m_TagString: Untagged
@@ -718,7 +720,7 @@ Rigidbody:
   m_Mass: 10000
   m_Drag: 0
   m_AngularDrag: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_CenterOfMass: {x: 0, y: -0.29, z: 0.61}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
   m_IncludeLayers:
@@ -727,7 +729,7 @@ Rigidbody:
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
-  m_ImplicitCom: 1
+  m_ImplicitCom: 0
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
@@ -746,13 +748,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6dac0319f1a324eeea47ad658c8f4fae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rb: {fileID: 0}
+  rb: {fileID: 7475510938898898843}
   planeStats: {fileID: 11400000, guid: 62382d86b5c7d7f4d83ec5221c5a829e, type: 2}
   cam: {fileID: 3529345245943720596}
   freeLookCam: {fileID: 911574715322068044}
   defaultCamPriority: 10
   freeLookCamPriority: 20
-  isFreeLookActive: 0
   fovTransitionCurve:
     serializedVersion: 2
     m_Curve:
@@ -777,15 +778,16 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  isFreeLookActive: 0
   pitchSpeedInfluence: 0.3
   diveSpeedBoost: 0.4
   climbSpeedPenalty: 0.5
-  gravitationalForce: 9.8
+  gravitationalForce: 50
+  extremeClimbAngle: 45
   currentSpeed: 0
   previousSpeed: 0
   targetSpeed: 0
   currentRotation: {x: 0, y: 0, z: 0}
-  currentHealth: 0
   currentPitchAngle: 0
   previousPitchAngle: 0
   currentAltitude: 0
@@ -950,6 +952,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c2920755ce55e34fa122265bc7b3e7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &4040129616311519669
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749110562298686092}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 966bb98e744a3b847a5ca9e5e14a8878, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  planeStats: {fileID: 11400000, guid: 62382d86b5c7d7f4d83ec5221c5a829e, type: 2}
+  currentHealth: 0
+--- !u!114 &6983208568921878108
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749110562298686092}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d143c8cd8e892924bb3cfd182436519e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  newCenterOfGravity: {x: 0, y: -0.29, z: 0.61}
 --- !u!1 &2163137148580700780
 GameObject:
   m_ObjectHideFlags: 0

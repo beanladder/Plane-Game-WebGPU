@@ -19,41 +19,34 @@ MonoBehaviour:
   repairTime: 5
   invertRollAxis: 0
   invertPitchAxis: 1
-  airNormalSpeed: 28
-  airBoostSpeed: 47
+  airNormalSpeed: 50
+  airBoostSpeed: 77
   accelerationRate: 0.95
   decelerationRate: 0.47
   mouseSensitivity: 9.5
   maxRollAngle: 360
-  rollSpeed: 24
+  rollSpeed: 12
   pitchSpeed: 0.19
   yawSpeed: 0.095
   pitchSpeedInfluence: 0.3
   diveSpeedBoost: 0.4
   climbSpeedPenalty: 0.01
-  gravitationalForce: 9.8
+  gravitationalForce: 50
   rotationalDamping: 0.96
   rollDamping: 0.97
   pitchSensitivityMultiplier: 0.95
   rollSensitivityMultiplier: 0.065
-  useExponentialPitchResponse: 1
+  useExponentialPitchResponse: 0
   useProgressiveRollResponse: 0
   exponentialPitchFactor: 1.5
   progressiveRollThreshold: 0.3
   progressiveRollMultiplier: 1.5
-  maxPitchAngle: 80
-  highAltitudePitchUpMultiplier: 0.2
-  highAltitudePitchDownMultiplier: 0.5
   inputSmoothTime: 0.26
   keyboardSmoothTime: 0.98
   lockCameraToHorizon: 1
-  defaultFov: 50
-  maxFov: 58
+  defaultFov: 40
+  maxFov: 55
   fovSmoothSpeed: 1.9
   cameraBlendTime: 1.2
-  highAltitudeFOV: 30
-  maxAltitude: 700
-  altitudeWarningThreshold: 480
-  maxAltitudePitchReduction: 0.3
   windRushSound: {fileID: 0}
   engineSputterSound: {fileID: 0}
