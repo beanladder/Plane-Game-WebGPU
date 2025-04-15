@@ -30,6 +30,17 @@ public class PlaneController : MonoBehaviour
     private float currentAutoPitchForce = 1f;
     private float autoPitchFadeOutVelocity;
 
+    [Header("Altitude Control")]
+    [SerializeField]
+    private AnimationCurve altitudeClimbPenaltyMultiplier = new AnimationCurve(
+        new Keyframe(0f, 1f),
+        new Keyframe(0.7f, 1.2f),
+        new Keyframe(0.85f, 2f),
+        new Keyframe(0.95f, 4f),
+        new Keyframe(1f, 8f)
+    );
+    [SerializeField] private float altitudePitchResistanceFactor = 2.5f;
+
     public float currentSpeed = 0f;
     public float previousSpeed = 0f;
     public float targetSpeed = 0f;
@@ -65,6 +76,7 @@ public class PlaneController : MonoBehaviour
     private const float TargetAutoPitchAngle = 90f;
 
     private float lastAltitude;
+    private float altitudeBasedPitchControl = 0f;
 
     private void Start()
     {
@@ -151,6 +163,14 @@ public class PlaneController : MonoBehaviour
 
         targetPitchInput = ApplyPitchSensitivityScheme(rawPitchInput);
         targetRollInput = ApplyRollSensitivityScheme(rawRollInput);
+
+        // Apply altitude-based pitch resistance
+        if (targetPitchInput < 0 && currentAltitude > planeStats.maxAltitude * 0.5f)
+        {
+            float altitudeFactor = Mathf.InverseLerp(planeStats.maxAltitude * 0.5f, planeStats.maxAltitude, currentAltitude);
+            float resistanceFactor = Mathf.Lerp(1f, altitudePitchResistanceFactor, altitudeFactor * altitudeFactor);
+            targetPitchInput /= resistanceFactor;
+        }
 
         if (Input.GetKey(KeyCode.A))
             targetYawInput = -1f;
@@ -256,6 +276,12 @@ public class PlaneController : MonoBehaviour
 
         float climbSteepness = Mathf.Clamp01(pitchFactor);
 
+        // Apply altitude-based throttle penalty for climbing
+        float altitudeFactor = Mathf.InverseLerp(0f, planeStats.maxAltitude, currentAltitude);
+        float altitudePenalty = altitudeClimbPenaltyMultiplier.Evaluate(altitudeFactor);
+
+        climbSteepness *= altitudePenalty;
+
         if (climbSteepness > 0.9f)
             return 0f;
 
@@ -271,6 +297,15 @@ public class PlaneController : MonoBehaviour
 
         ApplyPitchBasedSpeedModifications(ref baseTargetSpeed, throttleInput);
 
+        // Apply altitude-based speed penalty
+        float altitudeFactor = Mathf.InverseLerp(planeStats.maxAltitude * 0.7f, planeStats.maxAltitude, currentAltitude);
+        if (altitudeFactor > 0)
+        {
+            // Increasingly reduce speed at higher altitudes
+            float speedPenalty = Mathf.Lerp(1.0f, 0.4f, altitudeFactor * altitudeFactor);
+            baseTargetSpeed *= speedPenalty;
+        }
+
         targetSpeed = baseTargetSpeed;
 
         float rate = currentSpeed < targetSpeed ? planeStats.accelerationRate : planeStats.decelerationRate;
@@ -281,7 +316,14 @@ public class PlaneController : MonoBehaviour
             ApplyRotation();
         }
 
-        Vector3 gravityVector = Vector3.down * planeStats.gravitationalForce;
+        // Calculate and apply increasing gravity as altitude increases
+        float gravityMultiplier = 1f;
+        if (currentAltitude > planeStats.maxAltitude * 0.8f)
+        {
+            float highAltitudeFactor = Mathf.InverseLerp(planeStats.maxAltitude * 0.8f, planeStats.maxAltitude, currentAltitude);
+            gravityMultiplier = Mathf.Lerp(1f, 2.5f, highAltitudeFactor);
+        }
+        Vector3 gravityVector = Vector3.down * planeStats.gravitationalForce * gravityMultiplier;
 
         if (currentAltitude > planeStats.maxAltitude - planeStats.altitudeLimitSoftness)
         {
@@ -290,7 +332,7 @@ public class PlaneController : MonoBehaviour
                 planeStats.maxAltitude,
                 currentAltitude
             );
-            gravityVector += Vector3.down * exceedFactor * planeStats.altitudeLimitForce;
+            gravityVector += Vector3.down * exceedFactor * planeStats.altitudeLimitForce * 1.5f;
         }
 
         Vector3 forwardVelocity = transform.forward * currentSpeed;
@@ -310,13 +352,18 @@ public class PlaneController : MonoBehaviour
         else if (pitchInfluence > 0)
         {
             float climbSteepness = pitchInfluence;
-            float climbPenaltyFactor = climbSteepness * planeStats.climbSpeedPenalty * 1.5f;
+
+            // Apply altitude-based climb penalty
+            float altitudeFactor = Mathf.InverseLerp(0f, planeStats.maxAltitude, currentAltitude);
+            float altitudeClimbPenalty = Mathf.Lerp(1f, 3f, altitudeFactor * altitudeFactor);
+
+            float climbPenaltyFactor = climbSteepness * planeStats.climbSpeedPenalty * 1.5f * altitudeClimbPenalty;
             baseSpeed -= baseSpeed * climbPenaltyFactor;
 
             if (climbSteepness > 0.7f)
             {
                 float extremeClimbFactor = Mathf.InverseLerp(0.7f, 1.0f, climbSteepness);
-                baseSpeed *= (1.0f - extremeClimbFactor);
+                baseSpeed *= (1.0f - extremeClimbFactor * altitudeClimbPenalty);
             }
 
             if (baseSpeed < 0.1f)
@@ -403,6 +450,14 @@ public class PlaneController : MonoBehaviour
         targetRollVelocity *= speedFactor;
         targetYawVelocity *= speedFactor;
 
+        // Apply altitude-based pitch restrictions when pitching up (negative value is up)
+        if (pitchInput < 0 && currentAltitude > planeStats.maxAltitude * 0.6f)
+        {
+            float altitudeFactor = Mathf.InverseLerp(planeStats.maxAltitude * 0.6f, planeStats.maxAltitude, currentAltitude);
+            float pitchReduction = Mathf.Lerp(1f, 0.1f, altitudeFactor * altitudeFactor);
+            targetPitchVelocity *= pitchReduction;
+        }
+
         if (Mathf.Abs(rollInput) > 0.01f)
         {
             rollVelocity = Mathf.Lerp(rollVelocity, targetRollVelocity, Time.deltaTime * 5f);
@@ -465,6 +520,8 @@ public class PlaneController : MonoBehaviour
             float absValue = Mathf.Abs(modifiedInput);
             modifiedInput = sign * Mathf.Pow(absValue, planeStats.exponentialPitchFactor);
         }
+        // Add clamp to prevent excessive input
+        modifiedInput = Mathf.Clamp(modifiedInput, -1f, 1f);
         return modifiedInput;
     }
 
