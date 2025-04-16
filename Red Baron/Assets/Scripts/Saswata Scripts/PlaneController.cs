@@ -311,9 +311,22 @@ public class PlaneController : MonoBehaviour
         float rate = currentSpeed < targetSpeed ? planeStats.accelerationRate : planeStats.decelerationRate;
         currentSpeed = Mathf.SmoothDamp(currentSpeed, targetSpeed, ref speedSmoothVelocity, 1f / rate);
 
-        if (!isFreeLookActive)
+        // Apply auto-pitch regardless of camera mode
+        if (isAutoPitching)
         {
-            ApplyRotation();
+            HandleAutoPitchRotation();
+            HandleRollAndYaw();
+
+            // Apply normal rotation only when auto pitch force is fading
+            if (currentAutoPitchForce < 1f)
+            {
+                HandleAllRotations();
+            }
+        }
+        else if (!isFreeLookActive)
+        {
+            // Apply normal rotation when not in free look and not auto-pitching
+            HandleAllRotations();
         }
 
         // Calculate and apply increasing gravity as altitude increases
@@ -373,24 +386,6 @@ public class PlaneController : MonoBehaviour
         }
 
         baseSpeed += baseSpeed * -pitchInfluence * planeStats.pitchSpeedInfluence;
-    }
-
-    private void ApplyRotation()
-    {
-        if (isAutoPitching)
-        {
-            HandleAutoPitchRotation();
-            HandleRollAndYaw();
-
-            if (currentAutoPitchForce < 1f)
-            {
-                HandleAllRotations();
-            }
-        }
-        else
-        {
-            HandleAllRotations();
-        }
     }
 
     private void HandleAutoPitchRotation()

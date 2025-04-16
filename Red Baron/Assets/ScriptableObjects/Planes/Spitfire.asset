@@ -26,7 +26,7 @@ MonoBehaviour:
   mouseSensitivity: 9.5
   maxRollAngle: 360
   rollSpeed: 12
-  pitchSpeed: 0.19
+  pitchSpeed: 0.5
   yawSpeed: 0.095
   pitchSpeedInfluence: 0.3
   diveSpeedBoost: 0.4
@@ -50,3 +50,6 @@ MonoBehaviour:
   cameraBlendTime: 1.2
   windRushSound: {fileID: 0}
   engineSputterSound: {fileID: 0}
+  maxAltitude: 1000
+  altitudeLimitSoftness: 50
+  altitudeLimitForce: 5
